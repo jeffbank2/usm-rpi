@@ -209,7 +209,9 @@ class SouthernMissRPIBot:
                     q2 TEXT,
                     q3 TEXT,
                     q4 TEXT,
-                    payload_json TEXT NOT NULL
+                    impact_notes TEXT,
+                    recent_games TEXT,
+                    upcoming_games TEXT
                 )
                 """
             )
@@ -217,288 +219,26 @@ class SouthernMissRPIBot:
         finally:
             conn.close()
 
-    # ------------------------------------------------------------------
-    # Fetching
-    # ------------------------------------------------------------------
-    def fetch_text(self, url: str) -> str:
-        self._log(f"Fetching {url}")
-        resp = self.session.get(url, timeout=30)
-        resp.raise_for_status()
-        return resp.text
-
-    @staticmethod
-    def html_to_text(html: str) -> str:
-        soup = BeautifulSoup(html, "html.parser")
-        text = soup.get_text("\n", strip=True)
-        text = re.sub(r"\n{2,}", "\n", text)
-        return text
-
-    # ------------------------------------------------------------------
-    # Parsers
-    # ------------------------------------------------------------------
-    @staticmethod
-    def _extract_simple_value(text: str, label: str) -> Optional[str]:
-        pattern = re.escape(label) + r"\s+([^\n]+)"
-        m = re.search(pattern, text, flags=re.IGNORECASE)
-        return m.group(1).strip() if m else None
-
-    @staticmethod
-    def _extract_rank_and_value(text: str, label: str) -> Tuple[Optional[int], Optional[float]]:
-        pattern = re.escape(label) + r"\s+(\d+)\s+\(([0-9.]+)\)"
-        m = re.search(pattern, text, flags=re.IGNORECASE)
-        if not m:
-            return None, None
-        return int(m.group(1)), float(m.group(2))
-
-    @staticmethod
-    def _extract_team_sheet_rpi(text: str) -> Optional[int]:
-        m = re.search(r"RPI\s+(\d+)\s+Southern Miss", text, flags=re.IGNORECASE)
-        return int(m.group(1)) if m else None
-
-    @staticmethod
-    def _extract_quadrant_record(text: str, quadrant: int) -> Optional[str]:
-        pattern = rf"Quadrant\s+{quadrant}.*?overall\s+(\d+-\d+)"
-        m = re.search(pattern, text, flags=re.IGNORECASE | re.DOTALL)
-        return m.group(1) if m else None
-
-    @staticmethod
-    def _extract_game_blocks(text: str) -> List[Dict[str, Any]]:
-        months = "JAN|FEB|MAR|APR|MAY|JUN"
-        starts = list(re.finditer(rf"\b(?:{months})\s+\d{{1,2}}\s+(?:MON|TUE|WED|THU|FRI|SAT|SUN)\b", text))
-        games: List[Dict[str, Any]] = []
-
-        def clean_team_name(val: Optional[str]) -> Optional[str]:
-            if not val:
-                return None
-            val = val.strip()
-            val = re.sub(r"^[@vVsS. ]+", "", val).strip()
-            val = re.sub(r"\s+", " ", val)
-            if not val:
-                return None
-            if re.search(r"RPI:|Opponent RPI:|\b\d{1,2}:\d{2}\s+[AP]M\b|^[WL]\s+\d+\s+-\s+\d+$", val, re.I):
-                return None
-            if re.match(r"^\(?\d+-\d+\)?$", val):
-                return None
-            if re.match(rf"^(?:{months})\b", val):
-                return None
-            if val.upper() in {"AT", "VS", "HOME", "AWAY", "NEUTRAL", "FINAL", "LIVE", "PREVIEW"}:
-                return None
-            return val
-
-        for idx, start_match in enumerate(starts):
-            end_pos = starts[idx + 1].start() if idx + 1 < len(starts) else len(text)
-            block = text[start_match.start():end_pos]
-            lines = [ln.strip() for ln in block.splitlines() if ln.strip()]
-            if len(lines) < 4:
-                continue
-
-            date_str = f"{lines[0]} {lines[1]} {lines[2]}" if len(lines) >= 3 else lines[0]
-            opponent = None
-            location_type = "HOME"
-            result = None
-            score = None
-            opp_rpi = None
-
-            if "AT" in lines[:8]:
-                location_type = "AWAY"
-            elif "VS" in lines[:8]:
-                location_type = "NEUTRAL"
-
-            # Primary: line before OR 2 lines before '(record) RPI: nnn'
-            for i, line in enumerate(lines[1:15], start=1):
-                if re.match(r"^\(\d+-\d+\)\s+RPI:\s+\d+", line):
-                    for offset in (-1, -2):
-                        idx2 = i + offset
-                        if idx2 >= 0:
-                            candidate = clean_team_name(lines[idx2])
-                            if candidate and candidate.lower() not in {
-                                "southern miss", "golden eagles", "upcoming opponent",
-                                "home", "away", "neutral", "at", "vs",
-                            }:
-                                opponent = candidate
-                                break
-                    m = re.search(r"RPI:\s+(\d+)", line)
-                    if m:
-                        opp_rpi = int(m.group(1))
-                    break
-
-            # Secondary: after AT/VS
-            if opponent is None:
-                for i, line in enumerate(lines[1:15], start=1):
-                    if line in {"AT", "VS"} and i + 1 < len(lines):
-                        candidate = clean_team_name(lines[i + 1])
-                        if candidate and candidate.lower() not in {"southern miss", "golden eagles", "upcoming opponent"}:
-                            opponent = candidate
-                            break
-
-            # Tertiary: name before bare record line
-            if opponent is None:
-                for i, line in enumerate(lines[1:15], start=1):
-                    if re.match(r"^\(?\d+-\d+\)?$", line):
-                        for offset in (-1, -2):
-                            idx2 = i + offset
-                            if idx2 >= 1:
-                                candidate = clean_team_name(lines[idx2])
-                                if candidate and candidate.lower() not in {
-                                    "southern miss", "golden eagles", "upcoming opponent",
-                                    "home", "away", "neutral", "at", "vs",
-                                }:
-                                    opponent = candidate
-                                    break
-                        if opponent:
-                            break
-
-            # Home fallback
-            if opponent is None:
-                for line in lines[1:15]:
-                    candidate = clean_team_name(line)
-                    if not candidate:
-                        continue
-                    if candidate.lower() in {"southern miss", "golden eagles", "baseball", "upcoming opponent"}:
-                        continue
-                    if re.search(r"conference|stadium|field|impact games|rpi points", candidate, re.I):
-                        continue
-                    opponent = candidate
-                    break
-
-            score_match = re.search(r"\b([WL])\s+(\d+)\s+-\s+(\d+)\b", block)
-            if score_match:
-                result = score_match.group(1)
-                score = f"{score_match.group(2)}-{score_match.group(3)}"
-            else:
-                time_match = re.search(r"\b\d{1,2}:\d{2}\s+[AP]M\b", block)
-                if time_match:
-                    result = "UPCOMING"
-                    score = time_match.group(0)
-
-            if opp_rpi is None:
-                m = re.search(r"Opponent RPI:\s+(\d+)", block)
-                if m:
-                    opp_rpi = int(m.group(1))
-
-            games.append({
-                "raw_block": block[:1500],
-                "date_label": date_str,
-                "opponent": opponent,
-                "location_type": location_type,
-                "result": result,
-                "score_or_time": score,
-                "opponent_rpi": opp_rpi,
-            })
-        return games
-
-    @staticmethod
-    def _extract_impact_notes(text: str) -> List[str]:
-        notes: List[str] = []
-        if "Direct Impact Games" in text:
-            notes.append("Impact page includes direct games against Southern Miss and indirect games involving prior opponents.")
-        return notes[:6]
-
-    # ------------------------------------------------------------------
-    # Snapshot collection
-    # ------------------------------------------------------------------
-    def collect_snapshot(self, team_slug: str = "Southern-Miss", team_name: str = "Southern Miss") -> TeamSnapshot:
-        schedule_html   = self.fetch_text(f"{BASE}/schedule/{team_slug}")
-        team_sheet_html = self.fetch_text(f"{BASE}/team-sheet?team={team_slug}")
-        impact_html     = self.fetch_text(f"{BASE}/team-impact?team={team_slug}")
-
-        schedule_text   = self.html_to_text(schedule_html)
-        team_sheet_text = self.html_to_text(team_sheet_html)
-        impact_text     = self.html_to_text(impact_html)
-
-        games          = self._extract_game_blocks(schedule_text)
-        recent_games   = [g for g in games if g["result"] in {"W", "L"}][-7:]
-        upcoming_games = [g for g in games if g["result"] == "UPCOMING"][:5]
-
-        rpi_rank, rpi_value       = self._extract_rank_and_value(schedule_text, "RPI")
-        nc_rpi_rank, nc_rpi_value = self._extract_rank_and_value(schedule_text, "Non-Conference RPI")
-        sos_rank, sos_value       = self._extract_rank_and_value(schedule_text, "SOS")
-        nc_sos_rank, nc_sos_value = self._extract_rank_and_value(schedule_text, "Non-Conference SOS")
-
-        if rpi_rank is None:
-            rpi_rank = self._extract_team_sheet_rpi(team_sheet_text)
-
-        return TeamSnapshot(
-            captured_at=dt.datetime.now().isoformat(timespec="seconds"),
-            season=self.season,
-            team=team_name,
-            overall_record=self._extract_simple_value(schedule_text, "Overall"),
-            home_record=self._extract_simple_value(schedule_text, "Home"),
-            road_record=self._extract_simple_value(schedule_text, "Road"),
-            neutral_record=self._extract_simple_value(schedule_text, "Neutral"),
-            conf_record=self._extract_simple_value(schedule_text, "Conf"),
-            last_10=self._extract_simple_value(schedule_text, "Last 10"),
-            streak=self._extract_simple_value(schedule_text, "Streak"),
-            rpi_rank=rpi_rank,
-            rpi_value=rpi_value,
-            nc_rpi_rank=nc_rpi_rank,
-            nc_rpi_value=nc_rpi_value,
-            sos_rank=sos_rank,
-            sos_value=sos_value,
-            nc_sos_rank=nc_sos_rank,
-            nc_sos_value=nc_sos_value,
-            q1=self._extract_quadrant_record(team_sheet_text, 1),
-            q2=self._extract_quadrant_record(team_sheet_text, 2),
-            q3=self._extract_quadrant_record(team_sheet_text, 3),
-            q4=self._extract_quadrant_record(team_sheet_text, 4),
-            impact_notes=self._extract_impact_notes(impact_text),
-            recent_games=recent_games,
-            upcoming_games=upcoming_games,
-            source_urls={
-                "schedule":   f"{BASE}/schedule/{team_slug}",
-                "team_sheet": f"{BASE}/team-sheet?team={team_slug}",
-                "impact":     f"{BASE}/team-impact?team={team_slug}",
-            },
-        )
-
-    def collect_rival_snapshots(self) -> List[Dict[str, Any]]:
-        rivals = []
-        for name, slug in RIVAL_TEAMS.items():
-            try:
-                snap = self.collect_snapshot(team_slug=slug, team_name=name)
-                rivals.append({
-                    "team": name,
-                    "rpi_rank": snap.rpi_rank,
-                    "rpi_value": snap.rpi_value,
-                    "overall_record": snap.overall_record,
-                    "conf": get_conference(name),
-                })
-            except Exception as exc:
-                self._log(f"Could not fetch rival {name}: {exc}")
-                rivals.append({
-                    "team": name, "rpi_rank": None, "rpi_value": None,
-                    "overall_record": None, "conf": get_conference(name),
-                })
-        return rivals
-
-    # ------------------------------------------------------------------
-    # Database: save / retrieve
-    # ------------------------------------------------------------------
-    def save_snapshot(self, snapshot: TeamSnapshot) -> None:
+    def save_snapshot(self, snap: TeamSnapshot) -> None:
         conn = sqlite3.connect(self.db_path)
-        today = snapshot.captured_at[:10]
         try:
             conn.execute(
-                "DELETE FROM snapshots WHERE team = ? AND substr(captured_at,1,10) = ?",
-                (snapshot.team, today),
-            )
-            payload_json = json.dumps(dataclasses.asdict(snapshot), ensure_ascii=False)
-            conn.execute(
                 """
-                INSERT INTO snapshots (
-                    captured_at, season, team, rpi_rank, rpi_value, sos_rank, sos_value,
-                    overall_record, home_record, road_record, neutral_record, conf_record,
-                    last_10, streak, q1, q2, q3, q4, payload_json
-                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                INSERT INTO snapshots
+                  (captured_at,season,team,rpi_rank,rpi_value,sos_rank,sos_value,
+                   overall_record,home_record,road_record,neutral_record,conf_record,
+                   last_10,streak,q1,q2,q3,q4,impact_notes,recent_games,upcoming_games)
+                VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)
                 """,
                 (
-                    snapshot.captured_at, snapshot.season, snapshot.team,
-                    snapshot.rpi_rank, snapshot.rpi_value, snapshot.sos_rank, snapshot.sos_value,
-                    snapshot.overall_record, snapshot.home_record, snapshot.road_record,
-                    snapshot.neutral_record, snapshot.conf_record,
-                    snapshot.last_10, snapshot.streak,
-                    snapshot.q1, snapshot.q2, snapshot.q3, snapshot.q4,
-                    payload_json,
+                    snap.captured_at, snap.season, snap.team,
+                    snap.rpi_rank, snap.rpi_value, snap.sos_rank, snap.sos_value,
+                    snap.overall_record, snap.home_record, snap.road_record,
+                    snap.neutral_record, snap.conf_record, snap.last_10, snap.streak,
+                    snap.q1, snap.q2, snap.q3, snap.q4,
+                    json.dumps(snap.impact_notes),
+                    json.dumps(snap.recent_games),
+                    json.dumps(snap.upcoming_games),
                 ),
             )
             conn.commit()
@@ -508,862 +248,584 @@ class SouthernMissRPIBot:
     def get_previous_snapshot(self) -> Optional[TeamSnapshot]:
         conn = sqlite3.connect(self.db_path)
         try:
-            row = conn.execute(
+            cur = conn.execute(
                 """
-                SELECT payload_json FROM snapshots
-                WHERE team = ?
+                SELECT * FROM snapshots
+                WHERE team = 'Southern Miss'
                 ORDER BY captured_at DESC
-                LIMIT 1 OFFSET 1
-                """,
-                ("Southern Miss",),
-            ).fetchone()
-            if not row:
-                return None
-            return TeamSnapshot(**json.loads(row[0]))
+                LIMIT 2
+                """
+            )
+            rows = cur.fetchall()
+            cols = [d[0] for d in cur.description]
         finally:
             conn.close()
 
-    def get_rank_history(self, days: int = 45) -> List[Dict[str, Any]]:
+        if len(rows) < 2:
+            return None
+        row = rows[1]
+        d = dict(zip(cols, row))
+        snap = TeamSnapshot(
+            captured_at=d["captured_at"],
+            season=d["season"],
+            team=d["team"],
+            rpi_rank=d["rpi_rank"],
+            rpi_value=d["rpi_value"],
+            sos_rank=d["sos_rank"],
+            sos_value=d["sos_value"],
+            overall_record=d["overall_record"],
+            conf_record=d["conf_record"],
+            q1=d["q1"], q2=d["q2"], q3=d["q3"], q4=d["q4"],
+            impact_notes=json.loads(d["impact_notes"] or "[]"),
+            recent_games=json.loads(d["recent_games"] or "[]"),
+            upcoming_games=json.loads(d["upcoming_games"] or "[]"),
+        )
+        return snap
+
+    def get_rank_history(self, days: int = 45) -> List[Dict]:
         conn = sqlite3.connect(self.db_path)
         try:
-            cutoff = (dt.date.today() - dt.timedelta(days=days)).isoformat()
-            rows = conn.execute(
+            cutoff = (dt.datetime.utcnow() - dt.timedelta(days=days)).strftime("%Y-%m-%d")
+            cur = conn.execute(
                 """
-                SELECT substr(captured_at,1,10) as day, rpi_rank, rpi_value, overall_record
+                SELECT captured_at, rpi_rank, rpi_value, overall_record
                 FROM snapshots
-                WHERE team = 'Southern Miss' AND captured_at >= ?
+                WHERE team='Southern Miss' AND captured_at >= ?
                 ORDER BY captured_at ASC
                 """,
                 (cutoff,),
-            ).fetchall()
-            return [{"date": r[0], "rpi_rank": r[1], "rpi_value": r[2], "overall_record": r[3]}
-                    for r in rows]
+            )
+            rows = cur.fetchall()
         finally:
             conn.close()
-
-    def get_week_snapshots(self) -> List[TeamSnapshot]:
-        conn = sqlite3.connect(self.db_path)
-        try:
-            cutoff = (dt.date.today() - dt.timedelta(days=7)).isoformat()
-            rows = conn.execute(
-                """
-                SELECT payload_json FROM snapshots
-                WHERE team = 'Southern Miss' AND captured_at >= ?
-                ORDER BY captured_at ASC
-                """,
-                (cutoff,),
-            ).fetchall()
-            return [TeamSnapshot(**json.loads(r[0])) for r in rows]
-        finally:
-            conn.close()
+        return [
+            {"date": r[0][:10], "rpi_rank": r[1], "rpi_value": r[2], "overall_record": r[3]}
+            for r in rows
+        ]
 
     # ------------------------------------------------------------------
-    # RPI Radar
+    # HTTP helpers
     # ------------------------------------------------------------------
-    def get_rpi_radar(self, team_name: str = "Southern Miss", window: int = 3) -> List[str]:
-        html = self.fetch_text(RPI_LIVE_URL)
-        soup = BeautifulSoup(html, "html.parser")
-        rows = soup.find_all("tr")
-        teams = []
+    def _get(self, url: str) -> BeautifulSoup:
+        self._log(f"  GET {url}")
+        r = self.session.get(url, timeout=20)
+        r.raise_for_status()
+        return BeautifulSoup(r.text, "html.parser")
 
-        def clean_team(team: str) -> str:
-            team = re.sub(
-                r"\s+(Sun Belt|SEC|ACC|Big 12|Big Ten|AAC|C-USA|Conference USA|PAC-12|Pac-12|Big East|Big West).*",
-                "", team).strip()
-            team = re.sub(r"\s+\(\d+-\d+.*?\)$", "", team).strip()
-            return team
+    # ------------------------------------------------------------------
+    # Scraping
+    # ------------------------------------------------------------------
+    def _parse_record(self, text: str) -> Optional[str]:
+        m = re.search(r"(\d+)-(\d+)", text)
+        return m.group(0) if m else None
 
-        for row in rows:
-            cells = [c.get_text(" ", strip=True) for c in row.find_all("td")]
+    def _scrape_team_sheet(self) -> Dict[str, Any]:
+        soup = self._get(TEAM_SHEET_URL)
+        data: Dict[str, Any] = {}
+        for row in soup.select("table tr"):
+            cells = [td.get_text(strip=True) for td in row.select("td")]
             if len(cells) < 2:
                 continue
-            rank = cells[0].strip()
-            team = clean_team(cells[1])
-            if rank.isdigit() and team:
-                teams.append((int(rank), team))
+            key, val = cells[0].lower(), cells[1]
+            if "overall" in key:
+                data["overall_record"] = self._parse_record(val)
+            elif "home" in key:
+                data["home_record"] = self._parse_record(val)
+            elif "road" in key or "away" in key:
+                data["road_record"] = self._parse_record(val)
+            elif "neutral" in key:
+                data["neutral_record"] = self._parse_record(val)
+            elif "conference" in key or "conf" in key:
+                data["conf_record"] = self._parse_record(val)
+            elif "last 10" in key or "last10" in key:
+                data["last_10"] = self._parse_record(val) or val
+            elif "streak" in key:
+                data["streak"] = val
+            elif "rpi rank" in key and "nc" not in key:
+                try:
+                    data["rpi_rank"] = int(re.sub(r"\D", "", val))
+                except ValueError:
+                    pass
+            elif "rpi" in key and "value" in key and "nc" not in key:
+                try:
+                    data["rpi_value"] = float(val)
+                except ValueError:
+                    pass
+            elif "sos rank" in key and "nc" not in key:
+                try:
+                    data["sos_rank"] = int(re.sub(r"\D", "", val))
+                except ValueError:
+                    pass
+            elif "sos" in key and "value" in key and "nc" not in key:
+                try:
+                    data["sos_value"] = float(val)
+                except ValueError:
+                    pass
+            elif key.startswith("q1"):
+                data["q1"] = val
+            elif key.startswith("q2"):
+                data["q2"] = val
+            elif key.startswith("q3"):
+                data["q3"] = val
+            elif key.startswith("q4"):
+                data["q4"] = val
+        return data
 
-        if not teams:
-            return ["RPI radar unavailable."]
-
-        aliases = {team_name.lower(), "southern miss", "southern mississippi", "southern miss golden eagles"}
-        usm_index = None
-        for idx, (_, team) in enumerate(teams):
-            if team.lower() in aliases or "southern miss" in team.lower():
-                usm_index = idx
+    def _scrape_rpi_live(self) -> Dict[str, Any]:
+        soup = self._get(RPI_LIVE_URL)
+        data: Dict[str, Any] = {}
+        for row in soup.select("table tr"):
+            cells = [td.get_text(strip=True) for td in row.select("td")]
+            if len(cells) < 3:
+                continue
+            if "southern miss" in cells[1].lower() or (len(cells) > 2 and "southern miss" in cells[2].lower()):
+                try:
+                    data["rpi_rank"] = int(re.sub(r"\D", "", cells[0]))
+                except (ValueError, IndexError):
+                    pass
+                for cell in cells:
+                    m = re.search(r"0\.\d{4}", cell)
+                    if m:
+                        data["rpi_value"] = float(m.group())
+                        break
                 break
+        return data
 
-        if usm_index is None:
-            return ["Southern Miss not found in live RPI table."]
+    def _scrape_schedule(self) -> Tuple[List[Dict], List[Dict]]:
+        soup = self._get(SCHEDULE_URL)
+        recent: List[Dict] = []
+        upcoming: List[Dict] = []
+        today = dt.date.today()
 
-        start = max(0, usm_index - window)
-        end   = min(len(teams), usm_index + window + 1)
-        result = []
-        for rank, team in teams[start:end]:
-            conf  = get_conference(team)
-            label = f"#{rank} {team}"
-            if conf:
-                label += f" ({conf})"
-            if team.lower() in aliases or "southern miss" in team.lower():
-                label += " <"
-            result.append(label)
-        return result
+        for row in soup.select("table tr"):
+            cells = [td.get_text(strip=True) for td in row.select("td")]
+            if len(cells) < 3:
+                continue
+            date_str = cells[0] if cells else ""
+            opponent = cells[1] if len(cells) > 1 else ""
+            result_or_time = cells[2] if len(cells) > 2 else ""
+            site = cells[3] if len(cells) > 3 else ""
+            opp_rpi_str = cells[4] if len(cells) > 4 else ""
+
+            try:
+                game_date = dt.datetime.strptime(date_str, "%m/%d/%Y").date()
+            except ValueError:
+                try:
+                    game_date = dt.datetime.strptime(date_str, "%m/%d").replace(year=today.year).date()
+                except ValueError:
+                    continue
+
+            opp_rpi: Optional[int] = None
+            m = re.search(r"\d+", opp_rpi_str)
+            if m:
+                opp_rpi = int(m.group())
+
+            win_loss = None
+            m2 = re.match(r"([WL])\s+(\d+-\d+)", result_or_time)
+            if m2:
+                win_loss = m2.group(1)
+
+            if game_date < today:
+                if win_loss:
+                    recent.append({
+                        "date": str(game_date),
+                        "opponent": opponent,
+                        "result": result_or_time,
+                        "site": site,
+                        "opp_rpi": opp_rpi,
+                    })
+            else:
+                upcoming.append({
+                    "date": str(game_date),
+                    "opponent": opponent,
+                    "time": result_or_time,
+                    "site": site,
+                    "opp_rpi": opp_rpi,
+                })
+
+        return recent[-10:], upcoming[:10]
+
+    def _scrape_impact(self) -> List[str]:
+        soup = self._get(IMPACT_URL)
+        notes: List[str] = []
+        for el in soup.select("p, li, .impact-note, .note"):
+            t = el.get_text(strip=True)
+            if t and len(t) > 20:
+                notes.append(t)
+        return notes[:10]
+
+    def _scrape_rpi_radar(self) -> List[Dict]:
+        soup = self._get(RPI_LIVE_URL)
+        teams = []
+        usm_rank = None
+        for row in soup.select("table tr"):
+            cells = [td.get_text(strip=True) for td in row.select("td")]
+            if len(cells) < 2:
+                continue
+            try:
+                rank = int(re.sub(r"\D", "", cells[0]))
+            except (ValueError, IndexError):
+                continue
+            name = cells[1] if len(cells) > 1 else ""
+            conf = cells[2] if len(cells) > 2 else ""
+            if "southern miss" in name.lower():
+                usm_rank = rank
+            teams.append({"rank": rank, "name": name, "conf": conf})
+
+        if usm_rank is None:
+            return []
+
+        radar = []
+        for t in teams:
+            if abs(t["rank"] - usm_rank) <= 4:
+                radar.append(t)
+        radar.sort(key=lambda x: x["rank"])
+        return radar
+
+    def _scrape_rival(self, slug: str) -> Dict[str, Any]:
+        url = f"{BASE}/team-sheet?team={slug}"
+        try:
+            soup = self._get(url)
+        except Exception:
+            return {}
+        data: Dict[str, Any] = {"slug": slug}
+        for row in soup.select("table tr"):
+            cells = [td.get_text(strip=True) for td in row.select("td")]
+            if len(cells) < 2:
+                continue
+            key, val = cells[0].lower(), cells[1]
+            if "overall" in key:
+                data["overall_record"] = self._parse_record(val)
+            elif "rpi rank" in key and "nc" not in key:
+                try:
+                    data["rpi_rank"] = int(re.sub(r"\D", "", val))
+                except ValueError:
+                    pass
+            elif "conference" in key or "conf" in key:
+                data["conf_record"] = self._parse_record(val)
+        return data
 
     # ------------------------------------------------------------------
-    # Helpers
+    # Snapshot collection
     # ------------------------------------------------------------------
-    @staticmethod
-    def _safe_rank_delta(old: Optional[int], new: Optional[int]) -> Optional[int]:
-        if old is None or new is None:
-            return None
-        return old - new
+    def collect_snapshot(self) -> TeamSnapshot:
+        now = dt.datetime.utcnow().strftime("%Y-%m-%dT%H:%M:%SZ")
+        sheet = self._scrape_team_sheet()
+        if not sheet.get("rpi_rank"):
+            live = self._scrape_rpi_live()
+            sheet.update({k: v for k, v in live.items() if v})
+        recent, upcoming = self._scrape_schedule()
+        impact = self._scrape_impact()
 
-    @staticmethod
-    def _safe_value_delta(old: Optional[float], new: Optional[float]) -> Optional[float]:
-        if old is None or new is None:
-            return None
-        return round(new - old, 4)
+        return TeamSnapshot(
+            captured_at=now,
+            season=self.season,
+            team="Southern Miss",
+            overall_record=sheet.get("overall_record"),
+            home_record=sheet.get("home_record"),
+            road_record=sheet.get("road_record"),
+            neutral_record=sheet.get("neutral_record"),
+            conf_record=sheet.get("conf_record"),
+            last_10=sheet.get("last_10"),
+            streak=sheet.get("streak"),
+            rpi_rank=sheet.get("rpi_rank"),
+            rpi_value=sheet.get("rpi_value"),
+            sos_rank=sheet.get("sos_rank"),
+            sos_value=sheet.get("sos_value"),
+            q1=sheet.get("q1"),
+            q2=sheet.get("q2"),
+            q3=sheet.get("q3"),
+            q4=sheet.get("q4"),
+            impact_notes=impact,
+            recent_games=recent,
+            upcoming_games=upcoming,
+            source_urls={
+                "schedule": SCHEDULE_URL,
+                "team_sheet": TEAM_SHEET_URL,
+                "impact": IMPACT_URL,
+            },
+        )
 
-    @staticmethod
-    def _record_delta(old: Optional[str], new: Optional[str]) -> Tuple[int, int]:
-        def parse(rec: Optional[str]) -> Tuple[int, int]:
-            if not rec or "-" not in rec:
-                return 0, 0
-            a, b = rec.split("-", 1)
-            return int(a), int(b)
-        ow, ol = parse(old)
-        nw, nl = parse(new)
-        return nw - ow, nl - ol
-
-    @staticmethod
-    def _quadrant_bucket(location_type: str, opp_rpi: Optional[int]) -> str:
-        if opp_rpi is None:
-            return "quadrant unknown"
-        loc = location_type.upper()
-        if loc == "HOME":
-            if opp_rpi <= 25:  return "Q1"
-            if opp_rpi <= 50:  return "Q2"
-            if opp_rpi <= 100: return "Q3"
-            return "Q4"
-        if loc == "NEUTRAL":
-            if opp_rpi <= 40:  return "Q1"
-            if opp_rpi <= 80:  return "Q2"
-            if opp_rpi <= 160: return "Q3"
-            return "Q4"
-        if opp_rpi <= 60:  return "Q1"
-        if opp_rpi <= 120: return "Q2"
-        if opp_rpi <= 240: return "Q3"
-        return "Q4"
-
-    @staticmethod
-    def _sos_trajectory(upcoming_games: List[Dict]) -> str:
-        rpis = [g["opponent_rpi"] for g in upcoming_games if g.get("opponent_rpi")]
-        if not rpis:
-            return "Upcoming schedule strength unknown."
-        avg = sum(rpis) / len(rpis)
-        if avg <= 40:
-            return f"Upcoming schedule is loaded -- avg opponent RPI {avg:.0f}. Tough stretch ahead."
-        if avg <= 80:
-            return f"Upcoming schedule is moderate -- avg opponent RPI {avg:.0f}."
-        return f"Upcoming schedule is soft -- avg opponent RPI {avg:.0f}. Limited Q1/Q2 opportunities."
+    def collect_rival_snapshots(self) -> List[Dict]:
+        rivals = []
+        for name, slug in RIVAL_TEAMS.items():
+            d = self._scrape_rival(slug)
+            if d:
+                d["name"] = name
+                conf = get_conference(name)
+                if conf:
+                    d["conf"] = conf
+                rivals.append(d)
+        return rivals
 
     # ------------------------------------------------------------------
-    # Evidence builder
+    # Evidence bundle
     # ------------------------------------------------------------------
     def build_evidence(
         self,
         previous: Optional[TeamSnapshot],
         current: TeamSnapshot,
-        rivals: Optional[List[Dict]] = None,
+        rivals: List[Dict],
     ) -> Dict[str, Any]:
-        evidence: Dict[str, Any] = {
-            "captured_at": current.captured_at,
-            "team": current.team,
-            "current": dataclasses.asdict(current),
-            "previous": dataclasses.asdict(previous) if previous else None,
-            "rank_delta": None,
-            "rpi_value_delta": None,
-            "sos_rank_delta": None,
-            "sos_value_delta": None,
-            "record_delta": None,
-            "drivers": [],
-            "watchlist": [],
-            "rivals": rivals or [],
-            "sos_trajectory": self._sos_trajectory(current.upcoming_games),
-        }
+        rank_delta = None
+        if previous and previous.rpi_rank and current.rpi_rank:
+            rank_delta = previous.rpi_rank - current.rpi_rank
 
-        if previous is None:
-            evidence["drivers"].append("No prior snapshot exists yet. Today's run establishes the baseline.")
-            return evidence
+        def _q_wins(q: Optional[str]) -> int:
+            if not q:
+                return 0
+            m = re.match(r"(\d+)", q)
+            return int(m.group(1)) if m else 0
 
-        rank_delta = self._safe_rank_delta(previous.rpi_rank, current.rpi_rank)
-        evidence["rank_delta"]      = rank_delta
-        evidence["rpi_value_delta"] = self._safe_value_delta(previous.rpi_value, current.rpi_value)
-        evidence["sos_rank_delta"]  = self._safe_rank_delta(previous.sos_rank, current.sos_rank)
-        evidence["sos_value_delta"] = self._safe_value_delta(previous.sos_value, current.sos_value)
-        evidence["record_delta"]    = self._record_delta(previous.overall_record, current.overall_record)
-
-        win_delta, loss_delta = evidence["record_delta"]
-        latest_game = current.recent_games[-1] if current.recent_games else None
-
+        drivers: List[str] = []
         if rank_delta is not None:
             if rank_delta > 0:
-                evidence["drivers"].append(f"RPI rank improved by {rank_delta} spot(s).")
+                drivers.append(f"RPI rank improved by {rank_delta} spot(s).")
             elif rank_delta < 0:
-                evidence["drivers"].append(f"RPI rank slipped by {abs(rank_delta)} spot(s).")
+                drivers.append(f"RPI rank dropped by {abs(rank_delta)} spot(s).")
             else:
-                evidence["drivers"].append("RPI rank did not change from the prior snapshot.")
+                drivers.append("RPI rank did not change from the prior snapshot.")
 
-        if latest_game and (win_delta or loss_delta):
-            opp      = latest_game.get("opponent") or "the latest opponent"
-            loc      = latest_game.get("location_type", "UNKNOWN")
-            opp_rpi  = latest_game.get("opponent_rpi")
-            conf     = get_conference(opp)
-            conf_str = f", {conf}" if conf else ""
-            bucket   = self._quadrant_bucket(loc, opp_rpi)
-            if latest_game.get("result") == "W":
-                evidence["drivers"].append(
-                    f"Win against {opp} ({loc.lower()}, RPI {opp_rpi or 'unknown'}{conf_str}, {bucket})."
-                )
-                if loc == "AWAY":
-                    evidence["drivers"].append("Road wins carry extra RPI weight.")
-            elif latest_game.get("result") == "L":
-                evidence["drivers"].append(
-                    f"Loss against {opp} ({loc.lower()}, RPI {opp_rpi or 'unknown'}{conf_str}, {bucket})."
-                )
-                if loc == "HOME":
-                    evidence["drivers"].append("Home losses sting more in RPI evaluation.")
+        if previous and current.q1 and previous.q1:
+            prev_w = _q_wins(previous.q1)
+            curr_w = _q_wins(current.q1)
+            if curr_w > prev_w:
+                drivers.append(f"Q1 wins increased from {prev_w} to {curr_w}.")
 
-        sos_delta = evidence["sos_rank_delta"]
-        if sos_delta is not None:
-            if sos_delta > 0:
-                evidence["drivers"].append(f"Strength of schedule improved by {sos_delta} spot(s).")
-            elif sos_delta < 0:
-                evidence["drivers"].append(f"Strength of schedule worsened by {abs(sos_delta)} spot(s).")
+        radar = self._scrape_rpi_radar()
 
-        for q in ["q1", "q2", "q3", "q4"]:
-            old_q = getattr(previous, q)
-            new_q = getattr(current, q)
-            if old_q and new_q and old_q != new_q:
-                evidence["drivers"].append(f"{q.upper()} record changed from {old_q} to {new_q}.")
-
-        if current.impact_notes:
-            evidence["watchlist"].extend(current.impact_notes[:3])
-
-        for game in current.upcoming_games[:3]:
-            opp = game.get("opponent")
-            if not opp:
-                raw = game.get("raw_block", "")
-                m = re.search(
-                    r"([A-Z][A-Za-z&.' -]{2,})\s*[\n\r]+\s*(?:\(?\d+-\d+\)?\s+RPI:\s+\d+|\(?\d+-\d+\)?)",
-                    raw,
-                )
-                if m:
-                    candidate = m.group(1).strip()
-                    if candidate.lower() not in {"southern miss", "golden eagles", "upcoming opponent",
-                                                  "home", "away", "neutral", "at", "vs"}:
-                        opp = candidate
-            opp      = opp or "upcoming opponent"
-            loc      = game.get("location_type", "UNKNOWN").lower()
-            opp_rpi  = game.get("opponent_rpi")
-            conf     = get_conference(opp)
-            conf_str = f", {conf}" if conf else ""
-            bucket   = self._quadrant_bucket(loc.upper(), opp_rpi)
-            evidence["watchlist"].append(
-                f"Upcoming: {opp} ({loc}, RPI {opp_rpi or 'unknown'}{conf_str}, {bucket})."
-            )
-
-        evidence["drivers"]   = list(dict.fromkeys(evidence["drivers"]))
-        evidence["watchlist"] = list(dict.fromkeys(evidence["watchlist"]))
-        return evidence
-
-    # ------------------------------------------------------------------
-    # Week-in-review
-    # ------------------------------------------------------------------
-    def build_week_review(self) -> str:
-        snaps = self.get_week_snapshots()
-        if len(snaps) < 2:
-            return "Not enough data for a week-in-review yet."
-        first, last = snaps[0], snaps[-1]
-        rank_delta = self._safe_rank_delta(first.rpi_rank, last.rpi_rank)
-        w_delta, l_delta = self._record_delta(first.overall_record, last.overall_record)
-        sign = "+" if (rank_delta or 0) > 0 else ""
-        lines = [
-            f"Week in Review ({first.captured_at[:10]} to {last.captured_at[:10]})",
-            f"  Rank: {first.rpi_rank} -> {last.rpi_rank}  ({sign}{rank_delta if rank_delta is not None else 'N/A'})",
-            f"  Record: {first.overall_record} -> {last.overall_record}  (+{w_delta}W / +{l_delta}L)",
-            f"  RPI Value: {first.rpi_value} -> {last.rpi_value}",
-            f"  SOS Rank: {first.sos_rank} -> {last.sos_rank}",
+        upcoming_rpi_vals = [
+            g["opp_rpi"] for g in current.upcoming_games if g.get("opp_rpi")
         ]
-        return "\n".join(lines)
+        avg_opp_rpi = (
+            round(sum(upcoming_rpi_vals) / len(upcoming_rpi_vals))
+            if upcoming_rpi_vals else None
+        )
+        schedule_note = ""
+        if avg_opp_rpi:
+            if avg_opp_rpi <= 30:
+                schedule_note = f"Upcoming schedule is very tough -- avg opponent RPI {avg_opp_rpi}. High Q1/Q2 opportunity."
+            elif avg_opp_rpi <= 75:
+                schedule_note = f"Upcoming schedule is moderately challenging -- avg opponent RPI {avg_opp_rpi}. Some Q1/Q2 opportunities."
+            else:
+                schedule_note = f"Upcoming schedule is soft -- avg opponent RPI {avg_opp_rpi}. Limited Q1/Q2 opportunities."
+
+        return {
+            "date": dt.date.today().isoformat(),
+            "team": current.team,
+            "season": current.season,
+            "current": dataclasses.asdict(current),
+            "previous": dataclasses.asdict(previous) if previous else None,
+            "rank_delta": rank_delta,
+            "drivers": drivers,
+            "rivals": rivals,
+            "radar": radar,
+            "schedule_note": schedule_note,
+            "avg_upcoming_opp_rpi": avg_opp_rpi,
+        }
 
     # ------------------------------------------------------------------
-    # Windows toast alert
+    # Alert
     # ------------------------------------------------------------------
-    @staticmethod
-    def send_toast(title: str, message: str) -> None:
-        ps_script = (
-            "[Windows.UI.Notifications.ToastNotificationManager, Windows.UI.Notifications, ContentType = WindowsRuntime] | Out-Null\n"
-            "[Windows.Data.Xml.Dom.XmlDocument, Windows.Data.Xml.Dom, ContentType = WindowsRuntime] | Out-Null\n"
-            "$template = [Windows.UI.Notifications.ToastTemplateType]::ToastText02\n"
-            "$xml = [Windows.UI.Notifications.ToastNotificationManager]::GetTemplateContent($template)\n"
-            f"$xml.GetElementsByTagName('text')[0].AppendChild($xml.CreateTextNode('{title}')) | Out-Null\n"
-            f"$xml.GetElementsByTagName('text')[1].AppendChild($xml.CreateTextNode('{message}')) | Out-Null\n"
-            "$toast = [Windows.UI.Notifications.ToastNotification]::new($xml)\n"
-            "[Windows.UI.Notifications.ToastNotificationManager]::CreateToastNotifier('Southern Miss RPI Bot').Show($toast)"
-        )
+    def check_and_alert(self, evidence: Dict, threshold: int = 3) -> None:
+        delta = evidence.get("rank_delta")
+        if delta is None or delta >= -threshold:
+            return
+        rank = evidence["current"].get("rpi_rank", "?")
+        msg = f"Southern Miss RPI dropped {abs(delta)} spots to #{rank}!"
         try:
             subprocess.run(
-                ["powershell", "-ExecutionPolicy", "Bypass", "-Command", ps_script],
-                capture_output=True, timeout=10,
+                [
+                    "powershell", "-Command",
+                    f"[Windows.UI.Notifications.ToastNotificationManager, Windows.UI.Notifications, ContentType=WindowsRuntime] | Out-Null; "
+                    f"$template = [Windows.UI.Notifications.ToastTemplateType]::ToastText01; "
+                    f"$xml = [Windows.UI.Notifications.ToastNotificationManager]::GetTemplateContent($template); "
+                    f"$xml.GetElementsByTagName('text')[0].AppendChild($xml.CreateTextNode('{msg}')) | Out-Null; "
+                    f"$toast = [Windows.UI.Notifications.ToastNotification]::new($xml); "
+                    f"[Windows.UI.Notifications.ToastNotificationManager]::CreateToastNotifier('RPI Bot').Show($toast)",
+                ],
+                timeout=10,
+                capture_output=True,
             )
         except Exception:
             pass
 
-    def check_and_alert(self, evidence: Dict[str, Any], threshold: int = 3) -> None:
-        rank_delta = evidence.get("rank_delta")
-        if rank_delta is not None and rank_delta <= -threshold:
-            drop      = abs(rank_delta)
-            curr_rank = evidence["current"].get("rpi_rank", "?")
-            self.send_toast(
-                "Southern Miss RPI Alert",
-                f"Rank dropped {drop} spots to #{curr_rank}. Check the dashboard.",
-            )
-
     # ------------------------------------------------------------------
-    # GPT narrative (situational tone)
+    # Week review
     # ------------------------------------------------------------------
-    def render_llm_summary(self, evidence: Dict[str, Any], model: str = "gpt-4.1-mini") -> Optional[str]:
-        api_key = os.getenv("OPENAI_API_KEY")
-        if not api_key:
-            return None
+    def build_week_review(self) -> str:
+        conn = sqlite3.connect(self.db_path)
         try:
-            from openai import OpenAI
-        except Exception:
-            return None
-
-        rank = evidence["current"].get("rpi_rank")
-        if rank and rank <= 8:
-            tone = (
-                "Southern Miss is in national seed territory. Write with confidence and clarity. "
-                "Acknowledge the position, note what could threaten it, keep the tone assured."
+            cutoff = (dt.datetime.utcnow() - dt.timedelta(days=7)).strftime("%Y-%m-%d")
+            cur = conn.execute(
+                """
+                SELECT captured_at, rpi_rank, rpi_value, sos_rank, overall_record
+                FROM snapshots
+                WHERE team='Southern Miss' AND captured_at >= ?
+                ORDER BY captured_at ASC
+                """,
+                (cutoff,),
             )
-        elif rank and rank <= 16:
-            tone = (
-                "Southern Miss is in strong regional host position. Write with steady optimism. "
-                "Highlight what is working and what needs to hold."
-            )
-        elif rank and rank <= 25:
-            tone = (
-                "Southern Miss is on the host bubble. Write with urgency and precision. "
-                "Every data point matters. Make clear what the team needs to do."
-            )
-        else:
-            tone = (
-                "Southern Miss is outside the host range. Write with honest assessment. "
-                "Be direct about the gap and what the realistic path back looks like."
-            )
+            rows = cur.fetchall()
+        finally:
+            conn.close()
 
-        prompt = textwrap.dedent(f"""
-            You are a college baseball analyst writing a concise Southern Miss RPI daily brief.
-            Tone directive: {tone}
-            Use ONLY the facts in the JSON below. Do not invent data.
-            Include: rank movement, record change, why it moved, SOS trajectory, upcoming series preview.
-            Keep it under 220 words. Write in clean prose paragraphs, no bullet points.
+        if not rows:
+            return "No data for the past 7 days."
 
-            JSON:
-            {json.dumps(evidence, ensure_ascii=False, indent=2)}
-        """)
+        first, last = rows[0], rows[-1]
+        start_date = first[0][:10]
+        end_date = last[0][:10]
 
-        client = OpenAI(api_key=api_key)
-        try:
-            response = client.chat.completions.create(
-                model=model,
-                messages=[{"role": "user", "content": prompt}],
-                max_tokens=400,
-            )
-            return response.choices[0].message.content.strip()
-        except Exception as exc:
-            self._log(f"OpenAI error: {exc}")
-            return None
+        rank_start, rank_end = first[1], last[1]
+        rpi_start, rpi_end = first[2], last[2]
+        sos_start, sos_end = first[3], last[3]
+        rec_start, rec_end = first[4], last[4]
 
-    # ------------------------------------------------------------------
-    # Plain text summary (fallback / stdout)
-    # ------------------------------------------------------------------
-    def render_plain_summary(self, evidence: Dict[str, Any]) -> str:
-        current  = evidence["current"]
-        previous = evidence.get("previous")
-        lines = []
-        lines.append(f"Southern Miss RPI Daily Brief | {current['captured_at'][:10]}")
-        lines.append("")
+        def _w(r):
+            if not r: return 0
+            m = re.match(r"(\d+)", r); return int(m.group(1)) if m else 0
+        def _l(r):
+            if not r: return 0
+            m = re.search(r"-(\d+)", r); return int(m.group(1)) if m else 0
 
-        if previous:
-            lines.append(f"RPI Rank:  {previous.get('rpi_rank')} -> {current.get('rpi_rank')}")
-            lines.append(f"RPI Value: {previous.get('rpi_value')} -> {current.get('rpi_value')}")
-            lines.append(f"SOS Rank:  {previous.get('sos_rank')} -> {current.get('sos_rank')}")
-            lines.append(f"Record:    {previous.get('overall_record')} -> {current.get('overall_record')}")
-        else:
-            lines.append(f"RPI Rank:  {current.get('rpi_rank')}")
-            lines.append(f"RPI Value: {current.get('rpi_value')}")
-            lines.append(f"SOS Rank:  {current.get('sos_rank')}")
-            lines.append(f"Record:    {current.get('overall_record')}")
+        dw = _w(rec_end) - _w(rec_start)
+        dl = _l(rec_end) - _l(rec_start)
+        rank_arrow = rank_end - rank_start if (rank_start and rank_end) else 0
+        rpi_arrow = round(rpi_end - rpi_start, 4) if (rpi_start and rpi_end) else 0
+        sos_arrow = (sos_end - sos_start) if (sos_start and sos_end) else 0
 
-        rank = current.get("rpi_rank")
-        host_status = "Unknown"
-        if rank is not None:
-            if rank <= 8:    host_status = "National seed territory"
-            elif rank <= 16: host_status = "Strong regional host position"
-            elif rank <= 25: host_status = "Host bubble"
-            else:            host_status = "Outside host range"
-        lines.append(f"\nHost Outlook: {host_status}")
-
-        lines.append("\nTrend Summary:")
-        rank_delta   = evidence.get("rank_delta")
-        record_delta = evidence.get("record_delta")
-        if rank_delta is None:
-            lines.append("- No trend available yet.")
-        elif rank_delta == 0 and record_delta:
-            w, l = record_delta
-            lines.append(f"- Flat in rank, record changed +{w}W / +{l}L.")
-        elif rank_delta > 0:
-            lines.append(f"- Improving: up {rank_delta} spot(s).")
-        elif rank_delta < 0:
-            lines.append(f"- Slipping: down {abs(rank_delta)} spot(s).")
-        else:
-            lines.append("- Flat: no change.")
-
-        lines.append("\nWhy it moved:")
-        for d in evidence.get("drivers", [])[:6]:
-            lines.append(f"- {d}")
-
-        lines.append(f"\nSOS Trajectory: {evidence.get('sos_trajectory', '')}")
-
-        lines.append("\nRPI Radar:")
-        try:
-            for item in self.get_rpi_radar("Southern Miss", window=3):
-                lines.append(f"- {item}")
-        except Exception:
-            lines.append("- RPI radar unavailable.")
-
-        lines.append("\nImpact Games / Watchlist:")
-        for item in evidence.get("watchlist", [])[:6]:
-            lines.append(f"- {item}")
-
-        rivals = evidence.get("rivals", [])
-        if rivals:
-            lines.append("\nRival Watch:")
-            for r in sorted(rivals, key=lambda x: x.get("rpi_rank") or 9999):
-                rk      = r.get("rpi_rank") or "N/A"
-                rec     = r.get("overall_record") or "N/A"
-                conf    = r.get("conf") or ""
-                conf_str = f" ({conf})" if conf else ""
-                lines.append(f"- {r['team']}{conf_str}: RPI #{rk}, {rec}")
-
+        lines = [
+            f"Week in Review ({start_date} to {end_date})",
+            f" Rank: {rank_start} -> {rank_end} ({rank_arrow:+d})",
+            f" Record: {rec_start} -> {rec_end} (+{dw}W / +{dl}L)",
+            f" RPI Value: {rpi_start} -> {rpi_end}",
+            f" SOS Rank: {sos_start} -> {sos_end}",
+        ]
         return "\n".join(lines)
 
     # ------------------------------------------------------------------
-    # HTML dashboard
+    # Plain text summary
     # ------------------------------------------------------------------
-    def render_html_dashboard(
-        self,
-        evidence: Dict[str, Any],
-        narrative: Optional[str],
-        rank_history: List[Dict],
-        week_review: str,
-    ) -> str:
-        current  = evidence["current"]
-        rank     = current.get("rpi_rank") or 0
-        record   = current.get("overall_record") or "N/A"
-        rpi_val  = current.get("rpi_value") or 0.0
-        sos_rank = current.get("sos_rank") or "N/A"
-        date_str = current["captured_at"][:10]
-        rank_delta = evidence.get("rank_delta")
+    def render_plain_summary(self, evidence: Dict) -> str:
+        cur = evidence["current"]
+        rank = cur.get("rpi_rank", "?")
+        record = cur.get("overall_record", "?")
+        rpi_val = cur.get("rpi_value", "?")
+        sos = cur.get("sos_rank", "?")
+        delta = evidence.get("rank_delta")
+        delta_str = f" ({delta:+d})" if delta is not None else ""
 
-        if rank <= 8:
-            status_color = "#00c853"
-            status_label = "National Seed Territory"
-            status_icon  = "STAR"
-        elif rank <= 16:
-            status_color = "#69c0ff"
-            status_label = "Strong Regional Host"
-            status_icon  = "UP"
-        elif rank <= 25:
-            status_color = "#ffa940"
-            status_label = "Host Bubble"
-            status_icon  = "WATCH"
-        else:
-            status_color = "#ff4d4f"
-            status_label = "Outside Host Range"
-            status_icon  = "ALERT"
+        lines = [
+            f"=== Southern Miss RPI Update {evidence['date']} ===",
+            f"RPI Rank : #{rank}{delta_str}",
+            f"Record   : {record}",
+            f"RPI Value: {rpi_val}",
+            f"SOS Rank : #{sos}",
+            "",
+        ]
+        if evidence.get("drivers"):
+            lines.append("Why It Moved:")
+            for d in evidence["drivers"]:
+                lines.append(f"  • {d}")
+            lines.append("")
 
-        if rank_delta is None:
-            delta_html = ""
-        elif rank_delta > 0:
-            delta_html = f'<span class="delta up">+{rank_delta}</span>'
-        elif rank_delta < 0:
-            delta_html = f'<span class="delta down">{rank_delta}</span>'
-        else:
-            delta_html = '<span class="delta flat">--</span>'
+        if evidence.get("schedule_note"):
+            lines.append(evidence["schedule_note"])
+            lines.append("")
 
-        chart_labels = json.dumps([r["date"] for r in rank_history])
-        chart_data   = json.dumps([r["rpi_rank"] for r in rank_history])
+        upcoming = cur.get("upcoming_games", [])
+        if upcoming:
+            lines.append("Upcoming:")
+            for g in upcoming[:5]:
+                opp = g.get("opponent", "?")
+                site = g.get("site", "")
+                orpi = g.get("opp_rpi")
+                t = g.get("time", "")
+                orpi_str = f"  Opp RPI #{orpi}" if orpi else ""
+                lines.append(f"  {opp} ({site}){orpi_str}  {t}")
+            lines.append("")
 
-        drivers_html  = "".join(f"<li>{d}</li>" for d in evidence.get("drivers", [])[:6])
-        watchlist_html = "".join(f"<li>{w}</li>" for w in evidence.get("watchlist", [])[:6])
+        recent = cur.get("recent_games", [])
+        if recent:
+            lines.append("Recent Results:")
+            for g in recent[-5:]:
+                opp = g.get("opponent", "?")
+                res = g.get("result", "?")
+                orpi = g.get("opp_rpi")
+                orpi_str = f"  Opp RPI #{orpi}" if orpi else ""
+                lines.append(f"  {res}  vs {opp}{orpi_str}")
+            lines.append("")
 
-        rivals = sorted(evidence.get("rivals", []), key=lambda x: x.get("rpi_rank") or 9999)
-        rivals_rows = ""
-        for r in rivals:
-            rk   = r.get("rpi_rank") or "--"
-            rec  = r.get("overall_record") or "--"
-            conf = r.get("conf") or "--"
-            rivals_rows += f"<tr><td>{r['team']}</td><td>{conf}</td><td>#{rk}</td><td>{rec}</td></tr>"
+        summary = "\n".join(lines)
+        try:
+            Path("daily_brief.txt").write_text(summary, encoding="utf-8")
+        except Exception:
+            pass
+        return summary
+
+    # ------------------------------------------------------------------
+    # LLM narrative
+    # ------------------------------------------------------------------
+    def render_llm_summary(self, evidence: Dict) -> Optional[str]:
+        try:
+            import openai
+        except ImportError:
+            print("openai package not installed.", file=sys.stderr)
+            return None
+
+        api_key = os.environ.get("OPENAI_API_KEY")
+        if not api_key:
+            print("OPENAI_API_KEY not set.", file=sys.stderr)
+            return None
+
+        client = openai.OpenAI(api_key=api_key)
+        cur = evidence["current"]
+        rank = cur.get("rpi_rank", "?")
+        record = cur.get("overall_record", "?")
+        rpi_val = cur.get("rpi_value", "?")
+        sos_rank = cur.get("sos_rank", "?")
+        delta = evidence.get("rank_delta")
+        drivers = evidence.get("drivers", [])
+        schedule_note = evidence.get("schedule_note", "")
+        avg_opp = evidence.get("avg_upcoming_opp_rpi")
+        q1 = cur.get("q1", "?")
+        q2 = cur.get("q2", "?")
+        conf = cur.get("conf_record", "?")
+        recent = cur.get("recent_games", [])[-5:]
+        upcoming = cur.get("upcoming_games", [])[:5]
+
+        recent_str = "; ".join(
+            f"{g.get('result','?')} vs {g.get('opponent','?')} (RPI #{g.get('opp_rpi','?')})"
+            for g in recent
+        ) or "None"
+        upcoming_str = "; ".join(
+            f"{g.get('opponent','?')} ({g.get('site','?')}, RPI #{g.get('opp_rpi','?')})"
+            for g in upcoming
+        ) or "None"
+
+        delta_str = f"{delta:+d}" if delta is not None else "unknown"
+        drivers_str = " ".join(drivers) if drivers else "No specific drivers noted."
+
+        prompt = f"""You are the Southern Miss Baseball RPI analyst bot. Write a concise, sharp 3-paragraph narrative for today's daily dashboard.
+
+Data:
+- Date: {evidence['date']}
+- RPI Rank: #{rank} (change: {delta_str})
+- Record: {record} (Conf: {conf})
+- RPI Value: {rpi_val}
+- SOS Rank: #{sos_rank}
+- Q1: {q1}  Q2: {q2}
+- Recent: {recent_str}
+- Upcoming: {upcoming_str}
+- Schedule context: {schedule_note}
+- Avg upcoming opp RPI: {avg_opp}
+- Drivers: {drivers_str}
+
+Tone: Knowledgeable, direct, like a beat reporter who actually understands RPI math. Reference specific opponents and results. End with a forward-looking statement about what the next week means for tournament positioning. Do not use bullet points — write in flowing paragraphs."""
 
         try:
-            radar_items = self.get_rpi_radar("Southern Miss", window=4)
-            radar_html = "".join(
-                f'<li class="{"usm" if "<" in item else ""}">{item.replace("<","").strip()}'
-                + (' <span class="usm-tag">YOU ARE HERE</span>' if "<" in item else "")
-                + "</li>"
-                for item in radar_items
-            )
-        except Exception:
-            radar_html = "<li>Unavailable</li>"
-
-        upcoming_rows = ""
-        for g in current.get("upcoming_games", [])[:5]:
-            opp     = g.get("opponent") or "TBD"
-            loc     = g.get("location_type", "").title()
-            opp_rpi = g.get("opponent_rpi") or "--"
-            time    = g.get("score_or_time") or "--"
-            conf    = get_conference(opp)
-            bucket  = self._quadrant_bucket(g.get("location_type", "HOME"), g.get("opponent_rpi"))
-            bclass  = bucket.lower().replace(" ", "")
-            conf_td = f" <small class='conf-tag'>({conf})</small>" if conf else ""
-            upcoming_rows += (
-                f"<tr><td>{opp}{conf_td}</td><td>{loc}</td><td>{opp_rpi}</td>"
-                f"<td><span class='q-badge {bclass}'>{bucket}</span></td><td>{time}</td></tr>"
-            )
-
-        recent_rows = ""
-        for g in current.get("recent_games", [])[-7:]:
-            opp     = g.get("opponent") or "?"
-            res     = g.get("result") or "?"
-            score   = g.get("score_or_time") or "--"
-            loc     = g.get("location_type", "").title()
-            opp_rpi = g.get("opponent_rpi") or "--"
-            rclass  = "win" if res == "W" else "loss"
-            recent_rows += (
-                f"<tr><td>{opp}</td><td class='{rclass}'>{res} {score}</td>"
-                f"<td>{loc}</td><td>{opp_rpi}</td></tr>"
-            )
-
-        narrative_html = ""
-        if narrative:
-            safe_narrative = narrative.replace("&", "&amp;").replace("<", "&lt;").replace(">", "&gt;")
-            narrative_html = (
-                '<div class="card col-12 narrative">'
-                "<h2>Daily Brief</h2>"
-                f"<p>{safe_narrative}</p>"
-                "</div>"
-            )
-
-        week_html = week_review.replace("\n", "<br>")
-        sos_traj  = evidence.get("sos_trajectory", "")
-
-        q_html = ""
-        for q in ["q1", "q2", "q3", "q4"]:
-            val = current.get(q) or "--"
-            q_html += f'<div class="q-card"><div class="q-label">{q.upper()}</div><div class="q-val">{val}</div></div>'
-
-        return f"""<!DOCTYPE html>
-<html lang="en">
-<head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Southern Miss RPI Dashboard -- {date_str}</title>
-<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
-<style>
-@import url('https://fonts.googleapis.com/css2?family=Bebas+Neue&family=DM+Sans:ital,wght@0,300;0,400;0,500;0,700;1,400&family=DM+Mono:wght@400;500&display=swap');
-:root {{
-  --gold: #f5c518; --black: #0a0a0a; --dark: #111; --card: #181818;
-  --border: #262626; --text: #e2e2e2; --muted: #777; --status: {status_color};
-}}
-* {{ box-sizing: border-box; margin: 0; padding: 0; }}
-body {{ background: var(--black); color: var(--text); font-family: 'DM Sans', sans-serif; font-size: 14px; line-height: 1.6; }}
-header {{
-  background: linear-gradient(135deg, #0a0a0a 50%, #1a1200 100%);
-  border-bottom: 3px solid var(--gold);
-  padding: 24px 36px 20px;
-  display: flex; justify-content: space-between; align-items: flex-end;
-}}
-header h1 {{ font-family: 'Bebas Neue', sans-serif; font-size: 2.8rem; color: var(--gold); letter-spacing: 2px; line-height: 1; }}
-header p  {{ color: var(--muted); font-size: 0.72rem; letter-spacing: 3px; text-transform: uppercase; margin-top: 4px; }}
-.status-badge {{
-  background: var(--status); color: #000;
-  font-family: 'Bebas Neue', sans-serif; font-size: 1rem;
-  padding: 6px 14px; border-radius: 4px; letter-spacing: 1px;
-}}
-.grid {{
-  display: grid; grid-template-columns: repeat(12, 1fr);
-  gap: 14px; padding: 20px 36px; max-width: 1500px; margin: 0 auto;
-}}
-.col-4  {{ grid-column: span 4; }}
-.col-6  {{ grid-column: span 6; }}
-.col-8  {{ grid-column: span 8; }}
-.col-12 {{ grid-column: span 12; }}
-@media (max-width: 900px) {{ .col-4,.col-6,.col-8 {{ grid-column: span 12; }} }}
-.card {{ background: var(--card); border: 1px solid var(--border); border-radius: 8px; padding: 18px 22px; }}
-.card h2 {{
-  font-family: 'Bebas Neue', sans-serif; font-size: 0.9rem;
-  letter-spacing: 2px; color: var(--gold); text-transform: uppercase;
-  margin-bottom: 14px; border-bottom: 1px solid var(--border); padding-bottom: 8px;
-}}
-.metric-grid {{ display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }}
-.metric {{ background: var(--dark); border-radius: 6px; padding: 14px; text-align: center; }}
-.metric .val {{ font-family: 'Bebas Neue', sans-serif; font-size: 2.2rem; color: var(--gold); line-height: 1; }}
-.metric .lbl {{ font-size: 0.65rem; color: var(--muted); text-transform: uppercase; letter-spacing: 1px; margin-top: 3px; }}
-.delta {{ font-size: 0.85rem; font-weight: 700; margin-left: 5px; }}
-.delta.up   {{ color: #00c853; }}
-.delta.down {{ color: #ff4d4f; }}
-.delta.flat {{ color: var(--muted); }}
-canvas {{ max-height: 190px; }}
-ul {{ list-style: none; padding: 0; }}
-ul li {{ padding: 6px 0; border-bottom: 1px solid var(--border); font-size: 0.84rem; color: #ccc; }}
-ul li:last-child {{ border-bottom: none; }}
-ul.radar-list li {{ font-family: 'DM Mono', monospace; font-size: 0.82rem; }}
-ul.radar-list li.usm {{ color: var(--gold); font-weight: 500; }}
-.usm-tag {{ background: var(--gold); color: #000; font-size: 0.6rem; padding: 1px 5px; border-radius: 3px; margin-left: 6px; font-family: 'DM Sans', sans-serif; font-weight: 700; letter-spacing: 0.5px; vertical-align: middle; }}
-table {{ width: 100%; border-collapse: collapse; font-size: 0.83rem; }}
-th {{ color: var(--muted); font-weight: 500; text-align: left; padding: 5px 8px; border-bottom: 1px solid var(--border); font-size: 0.7rem; text-transform: uppercase; letter-spacing: 0.5px; }}
-td {{ padding: 7px 8px; border-bottom: 1px solid #1e1e1e; }}
-tr:last-child td {{ border-bottom: none; }}
-.win  {{ color: #00c853; font-weight: 600; }}
-.loss {{ color: #ff4d4f; font-weight: 600; }}
-.q-row {{ display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 12px; }}
-.q-card {{ flex: 1; min-width: 55px; background: var(--dark); border-radius: 6px; padding: 10px 6px; text-align: center; }}
-.q-label {{ font-size: 0.65rem; color: var(--muted); text-transform: uppercase; letter-spacing: 1px; }}
-.q-val   {{ font-family: 'Bebas Neue', sans-serif; font-size: 1.35rem; color: var(--gold); }}
-.q-badge {{ display: inline-block; padding: 2px 6px; border-radius: 3px; font-size: 0.72rem; font-weight: 600; }}
-.q1 {{ background: #00c85322; color: #00c853; border: 1px solid #00c85344; }}
-.q2 {{ background: #69c0ff22; color: #69c0ff; border: 1px solid #69c0ff44; }}
-.q3 {{ background: #ffa94022; color: #ffa940; border: 1px solid #ffa94044; }}
-.q4 {{ background: #ff4d4f22; color: #ff4d4f; border: 1px solid #ff4d4f44; }}
-.quadrantunknown {{ background: #33333322; color: #888; border: 1px solid #333; }}
-.narrative {{ background: linear-gradient(135deg, #1a1400 0%, #181818 60%); border-color: #3a2e00; }}
-.narrative h2 {{ color: var(--gold); border-color: #3a2e00; }}
-.narrative p {{ font-size: 1.05rem; line-height: 1.85; color: #e0e0e0; font-style: normal; max-width: 960px; }}
-.week-box {{ background: var(--dark); border-radius: 6px; padding: 12px 16px; font-family: 'DM Mono', monospace; font-size: 0.8rem; color: #bbb; line-height: 1.9; }}
-.sos-note {{ background: #1a1300; border-left: 3px solid var(--gold); padding: 9px 12px; border-radius: 0 6px 6px 0; font-size: 0.84rem; color: #ccc; }}
-.conf-tag {{ color: var(--muted); font-size: 0.75em; }}
-footer {{ text-align: center; color: var(--muted); font-size: 0.72rem; padding: 20px 36px; border-top: 1px solid var(--border); margin-top: 4px; }}
-</style>
-</head>
-<body>
-<header>
-  <div>
-    <h1>Southern Miss Baseball</h1>
-    <p>RPI Intelligence Dashboard &nbsp;·&nbsp; {date_str}</p>
-  </div>
-  <div class="status-badge">{status_icon} &nbsp; {status_label}</div>
-</header>
-
-<div class="grid">
-
-  {narrative_html}
-
-  <div class="card col-4">
-    <h2>Key Metrics</h2>
-    <div class="metric-grid">
-      <div class="metric"><div class="val">#{rank} {delta_html}</div><div class="lbl">RPI Rank</div></div>
-      <div class="metric"><div class="val">{record}</div><div class="lbl">Record</div></div>
-      <div class="metric"><div class="val">{rpi_val:.4f}</div><div class="lbl">RPI Value</div></div>
-      <div class="metric"><div class="val">#{sos_rank}</div><div class="lbl">SOS Rank</div></div>
-    </div>
-  </div>
-
-  <div class="card col-4">
-    <h2>Quadrant Records</h2>
-    <div class="q-row">{q_html}</div>
-    <div class="sos-note">{sos_traj}</div>
-  </div>
-
-  <div class="card col-4">
-    <h2>Rank Trend (45 days)</h2>
-    <canvas id="rankChart"></canvas>
-  </div>
-
-  <div class="card col-4">
-    <h2>Why It Moved</h2>
-    <ul>{drivers_html or "<li>No drivers yet.</li>"}</ul>
-  </div>
-
-  <div class="card col-4">
-    <h2>RPI Radar</h2>
-    <ul class="radar-list">{radar_html}</ul>
-  </div>
-
-  <div class="card col-4">
-    <h2>Rival Watch</h2>
-    <table>
-      <thead><tr><th>Team</th><th>Conf</th><th>RPI</th><th>Record</th></tr></thead>
-      <tbody>{rivals_rows or "<tr><td colspan='4'>No rival data.</td></tr>"}</tbody>
-    </table>
-  </div>
-
-  <div class="card col-6">
-    <h2>Upcoming Games</h2>
-    <table>
-      <thead><tr><th>Opponent</th><th>Site</th><th>Opp RPI</th><th>Quadrant</th><th>Time</th></tr></thead>
-      <tbody>{upcoming_rows or "<tr><td colspan='5'>No upcoming games found.</td></tr>"}</tbody>
-    </table>
-  </div>
-
-  <div class="card col-6">
-    <h2>Recent Results</h2>
-    <table>
-      <thead><tr><th>Opponent</th><th>Result</th><th>Site</th><th>Opp RPI</th></tr></thead>
-      <tbody>{recent_rows or "<tr><td colspan='4'>No recent games found.</td></tr>"}</tbody>
-    </table>
-  </div>
-
-  <div class="card col-6">
-    <h2>Impact Games / Watchlist</h2>
-    <ul>{watchlist_html or "<li>No items.</li>"}</ul>
-  </div>
-
-  <div class="card col-6">
-    <h2>Week in Review</h2>
-    <div class="week-box">{week_html}</div>
-  </div>
-
-</div>
-
-<footer>Southern Miss RPI Bot &nbsp;·&nbsp; Data: Warren Nolan &nbsp;·&nbsp; Generated {date_str}</footer>
-
-<script>
-const ctx = document.getElementById('rankChart').getContext('2d');
-new Chart(ctx, {{
-  type: 'line',
-  data: {{
-    labels: {chart_labels},
-    datasets: [{{
-      label: 'RPI Rank',
-      data: {chart_data},
-      borderColor: '#f5c518',
-      backgroundColor: 'rgba(245,197,24,0.07)',
-      tension: 0.35,
-      pointBackgroundColor: '#f5c518',
-      pointRadius: 4,
-      fill: true,
-    }}]
-  }},
-  options: {{
-    responsive: true,
-    plugins: {{ legend: {{ display: false }} }},
-    scales: {{
-      y: {{
-        reverse: true,
-        ticks: {{ color: '#666', stepSize: 1 }},
-        grid: {{ color: '#1e1e1e' }},
-        title: {{ display: true, text: 'Rank (lower = better)', color: '#555', font: {{ size: 10 }} }}
-      }},
-      x: {{
-        ticks: {{ color: '#666', maxTicksLimit: 8 }},
-        grid: {{ color: '#161616' }}
-      }}
-    }}
-  }}
-}});
-</script>
-</body>
-</html>"""
-
-
-# ---------------------------------------------------------------------------
-# Main
-# ---------------------------------------------------------------------------
-def main() -> int:
-    parser = argparse.ArgumentParser(description="Southern Miss RPI Bot -- Full Edition")
-    parser.add_argument("--db",        default="southern_miss_rpi.db")
-    parser.add_argument("--season",    type=int, default=2026)
-    parser.add_argument("--json",      action="store_true", help="Print evidence bundle as JSON")
-    parser.add_argument("--llm",       action="store_true", help="Use GPT narrative (requires OPENAI_API_KEY)")
-    parser.add_argument("--verbose",   action="store_true")
-    parser.add_argument("--html",      default="daily_dashboard.html", help="HTML output path")
-    parser.add_argument("--no-open",   action="store_true", help="Do not auto-open browser")
-    parser.add_argument("--no-rivals", action="store_true", help="Skip rival collection (faster)")
-    parser.add_argument("--history",   action="store_true", help="Print rank history and exit")
-    parser.add_argument("--week",      action="store_true", help="Print week-in-review and exit")
-    args = parser.parse_args()
-
-    bot = SouthernMissRPIBot(db_path=args.db, season=args.season, verbose=args.verbose)
-
-    if args.history:
-        for row in bot.get_rank_history():
-            print(f"{row['date']}  RPI #{row['rpi_rank']}  ({row['rpi_value']})  {row['overall_record']}")
-        return 0
-
-    if args.week:
-        print(bot.build_week_review())
-        return 0
-
-    try:
-        print("Collecting Southern Miss snapshot...")
-        current  = bot.collect_snapshot()
-        bot.save_snapshot(current)
-        previous = bot.get_previous_snapshot()
-
-        rivals: List[Dict] = []
-        if not args.no_rivals:
-            print("Collecting rival snapshots (6 teams)...")
-            rivals = bot.collect_rival_snapshots()
-
-        evidence = bot.build_evidence(previous, current, rivals)
-
-    except requests.HTTPError as exc:
-        print(f"HTTP error: {exc}", file=sys.stderr)
-        return 2
-    except requests.RequestException as exc:
-        print(f"Network error: {exc}", file=sys.stderr)
-        return 2
-    except Exception as exc:
-        print(f"Unexpected error: {exc}", file=sys.stderr)
-        return 1
-
-    # Toast alert check
-    bot.check_and_alert(evidence, threshold=3)
-
-    if args.json:
-        print(json.dumps(evidence, indent=2, ensure_ascii=False))
-        return 0
-
-    # GPT narrative
-    narrative: Optional[str] = None
-    if args.llm:
-        print("Generating GPT narrative...")
-        narrative = bot.render_llm_summary(evidence)
-        if narrative:
-            print("\n--- GPT Narrative ---")
-            print(narrative)
-            print("---------------------\n")
-
-    # Plain text to stdout / daily_brief.txt
-    print(bot.render_plain_summary(evidence))
-
-    # HTML dashboard
-    rank_history = bot.get_rank_history(days=45)
-    week_review  = bot.build_week_review()
-    html_content = bot.render_html_dashboard(evidence, narrative, rank_history, week_review)
-
-    html_path = Path(args.html)
-    html_path.write_text(html_content, encoding="utf-8")
-    print(f"\nDashboard saved: {html_path.resolve()}")
-
-    if not args.no_open:
-        webbrowser.open(html_path.resolve().as_uri())
-
-    return 0
-
-
-if __name__ == "__main__":
-    raise SystemExit(main())
+            resp = client.chat.completions.create(
+                model="gpt-4o",
+                messages=[{"role": "user", "content": prompt}],
+                max_tokens=500,
