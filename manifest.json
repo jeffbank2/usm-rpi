@@ -1,0 +1,19 @@
+{
+  "name": "Southern Miss RPI",
+  "short_name": "USM RPI",
+  "description": "Southern Miss Baseball RPI Dashboard",
+  "start_url": "/usm-rpi/",
+  "scope": "/usm-rpi/",
+  "display": "standalone",
+  "background_color": "#c9a014",
+  "theme_color": "#c9a014",
+  "orientation": "portrait-primary",
+  "icons": [
+    {
+      "src": "RPI_Logo.jpg",
+      "sizes": "1024x1024",
+      "type": "image/jpeg",
+      "purpose": "any"
+    }
+  ]
+}
