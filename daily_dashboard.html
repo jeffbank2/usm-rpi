@@ -4,6 +4,14 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Southern Miss RPI Dashboard -- 2026-03-17</title>
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="USM RPI">
+<meta name="theme-color" content="#f5c518">
+<link rel="manifest" href="manifest.json">
+<link rel="apple-touch-icon" href="RPI_Logo.jpg">
+<link rel="icon" type="image/jpeg" href="RPI_Logo.jpg">
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
 <style>
 @import url('https://fonts.googleapis.com/css2?family=Bebas+Neue&family=DM+Sans:ital,wght@0,300;0,400;0,500;0,700;1,400&family=DM+Mono:wght@400;500&display=swap');
@@ -34,7 +42,37 @@ header p  { color: var(--muted); font-size: 0.72rem; letter-spacing: 3px; text-t
 .col-6  { grid-column: span 6; }
 .col-8  { grid-column: span 8; }
 .col-12 { grid-column: span 12; }
-@media (max-width: 900px) { .col-4,.col-6,.col-8 { grid-column: span 12; } }
+@media (max-width: 900px) {
+  .col-4,.col-6,.col-8 { grid-column: span 12; }
+  header { padding: 16px; flex-direction: column; align-items: flex-start; gap: 12px; }
+  header h1 { font-size: 2rem; }
+  .grid { padding: 12px; gap: 10px; }
+  .metric .val { font-size: 1.8rem; }
+  .wi-cards-row { flex-direction: column; }
+  .wi-card { min-width: unset; }
+  .wi-outcomes { flex-direction: column; gap: 8px; }
+  .wi-vs { display: none; }
+  .table-wrap { overflow-x: auto; -webkit-overflow-scrolling: touch; }
+  .q-row { gap: 6px; }
+  .q-card { min-width: 45px; padding: 8px 4px; }
+  .q-val { font-size: 1.1rem; }
+  .narrative p { font-size: 0.95rem; }
+  .tip::after { width: 180px; font-size: 0.72rem; }
+  .status-badge { font-size: 0.85rem; padding: 5px 10px; }
+  footer { padding: 16px; font-size: 0.7rem; }
+}
+@media (max-width: 480px) {
+  header h1 { font-size: 1.6rem; }
+  header img { width: 52px; height: 52px; }
+  .metric .val { font-size: 1.5rem; }
+  .card { padding: 14px; }
+  .card h2 { font-size: 0.8rem; }
+  .wi-rank { font-size: 1.6rem; }
+  .q-val { font-size: 1rem; }
+  .metric-grid { gap: 6px; }
+  .metric { padding: 10px; }
+  .week-box { font-size: 0.72rem; }
+}
 .card { background: var(--card); border: 1px solid var(--border); border-radius: 8px; padding: 18px 22px; }
 .card h2 {
   font-family: 'Bebas Neue', sans-serif; font-size: 0.9rem;
@@ -78,79 +116,120 @@ tr:last-child td { border-bottom: none; }
 .week-box { background: var(--dark); border-radius: 6px; padding: 12px 16px; font-family: 'DM Mono', monospace; font-size: 0.8rem; color: #bbb; line-height: 1.9; }
 .sos-note { background: #1a1300; border-left: 3px solid var(--gold); padding: 9px 12px; border-radius: 0 6px 6px 0; font-size: 0.84rem; color: #ccc; }
 .conf-tag { color: var(--muted); font-size: 0.75em; }
+.wi-cards-row { display: flex; gap: 16px; flex-wrap: wrap; }
+.wi-card { flex: 1; min-width: 280px; background: var(--dark); border-radius: 8px; padding: 16px; border: 1px solid #2a2a00; }
+.wi-header { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; margin-bottom: 10px; }
+.wi-opp { font-weight: 600; font-size: 1rem; color: var(--text); }
+.wi-meta { font-size: 0.75rem; color: var(--muted); }
+.stakes-badge { font-size: 0.65rem; font-weight: 700; padding: 2px 7px; border-radius: 3px; letter-spacing: 0.5px; }
+.gpt-stake { font-style: italic; font-size: 0.88rem; color: #bbb; margin-bottom: 12px; border-left: 2px solid #3a2e00; padding-left: 10px; }
+.wi-outcomes { display: flex; align-items: center; gap: 12px; }
+.wi-outcome { flex: 1; text-align: center; padding: 12px; border-radius: 6px; }
+.win-outcome  { background: #00c85312; border: 1px solid #00c85333; }
+.loss-outcome { background: #ff4d4f12; border: 1px solid #ff4d4f33; }
+.wi-label { font-size: 0.65rem; text-transform: uppercase; letter-spacing: 1px; color: var(--muted); }
+.wi-rank  { font-family: 'Bebas Neue', sans-serif; font-size: 2rem; line-height: 1; color: var(--gold); margin: 4px 0; }
+.wi-delta { font-size: 0.8rem; font-weight: 700; }
+.wi-delta.up   { color: #00c853; }
+.wi-delta.down { color: #ff4d4f; }
+.wi-vs { font-family: 'Bebas Neue', sans-serif; font-size: 1.2rem; color: var(--muted); }
+.wi-upset-warn { font-size: 0.72rem; font-weight: 600; color: #ffa940; margin-top: 4px; letter-spacing: 0.5px; }
+.wi-upset-tag { font-size: 0.65rem; font-weight: 600; color: #ffa940; border: 1px solid #ffa94044; background: #ffa94022; padding: 1px 5px; border-radius: 3px; margin-left: 4px; }
+/* Tooltips */
+.tip { position: relative; cursor: help; display: inline; }
+.tip::after {
+  content: attr(data-tip);
+  position: absolute; bottom: 125%; left: 50%; transform: translateX(-50%);
+  background: #1e1e1e; color: #e2e2e2; border: 1px solid #3a3a3a;
+  border-radius: 6px; padding: 8px 12px; font-size: 0.78rem; line-height: 1.5;
+  width: 240px; white-space: normal; text-align: left;
+  opacity: 0; pointer-events: none; transition: opacity 0.15s ease;
+  z-index: 999; font-family: 'DM Sans', sans-serif; font-style: normal;
+  font-weight: 400; box-shadow: 0 4px 16px #0008;
+}
+.tip::before {
+  content: ''; position: absolute; bottom: 115%; left: 50%; transform: translateX(-50%);
+  border: 5px solid transparent; border-top-color: #3a3a3a;
+  opacity: 0; pointer-events: none; transition: opacity 0.15s ease; z-index: 999;
+}
+.tip:hover::after, .tip:hover::before { opacity: 1; }
 footer { text-align: center; color: var(--muted); font-size: 0.72rem; padding: 20px 36px; border-top: 1px solid var(--border); margin-top: 4px; }
 </style>
 </head>
 <body>
 <header>
-  <div>
-    <h1>Southern Miss Baseball</h1>
-    <p>RPI Intelligence Dashboard &nbsp;·&nbsp; 2026-03-17</p>
+  <div style="display:flex;align-items:center;gap:20px;">
+    <img src="RPI_Logo.jpg" alt="USM RPI Logo"
+         style="width:72px;height:72px;border-radius:14px;object-fit:cover;border:2px solid #f5c518;flex-shrink:0;">
+    <div>
+      <h1>Southern Miss Baseball</h1>
+      <p>RPI Intelligence Dashboard &nbsp;·&nbsp; 2026-03-17</p>
+    </div>
   </div>
   <div class="status-badge">STAR &nbsp; National Seed Territory</div>
 </header>
 
 <div class="grid">
 
-  <div class="card col-12 narrative"><h2>Daily Brief</h2><p>Southern Miss maintains its hold on the top RPI spot at No. 1 with a marginal increase to 0.6909, reflecting continued national seed territory. The Golden Eagles remain impeccable against quality opponents, holding a strong 10-3 record in Quadrant 1 and demonstrating exceptional strength of schedule at No. 2 overall, with a slight uptick to 0.6576. Despite a recent 1-2 conference start and a current one-game losing streak following the March 15 setback at Arkansas State, the team's overall 16-4 record confirms their resilience and elite standing.
+  <div class="card col-12 narrative"><h2>Daily Brief</h2><p>Southern Miss remains firmly entrenched at the top of the RPI rankings, holding steady at No. 1 with a marginal increase to a 0.6909 rating. Their strength of schedule remains elite at No. 2 nationally, ticking up slightly to 0.6576. Despite this consistency, the team’s recent three-game road series against Arkansas State—a solid RPI 23 opponent—resulted in a split with two losses and one win, contributing to a 1-2 mark in conference play and a slight dip in momentum after snapping a winning streak.
 
-The ranking stability is notable given the challenges of road matchups against a ranked Arkansas State squad (RPI 23) and a pivotal win over Ole Miss (RPI 6) earlier this month. Southern Miss's upcoming schedule softens, featuring a neutral matchup against Nicholls (RPI 152) and a home series versus Troy (RPI 89), offering fewer chances to bolster Q1/Q2 wins but preserving their RPI advantage. Attention will focus next week on the critical March 24 road game at Mississippi State (RPI 17), a true test to reinforce Southern Miss's resume in hostile territory.
+Southern Miss continues to dominate outside conference with a commanding 16-4 overall record, backed by a 10-3 mark in quality one wins. However, as the non-conference slate winds down, their Q2 and Q3 records have adjusted significantly, shifting to 3-0 and 0-0 respectively, reflecting fewer marquee opportunities remaining on the schedule. Their upcoming stretch features a softer slate with an average opponent RPI around 87, including neutral site play against Nicholls (RPI 152) and a home series versus Troy (RPI 89). This limited access to high-Q1/Q2 contests could challenge their ability to pad resume strength.
 
-Confidence remains high in Southern Miss’s positioning. Maintaining momentum through these upcoming contests is essential to secure and solidify their national seed placement as they navigate postseason projections with a strong SOS and top-tier RPI.</p></div>
+Looking ahead, Southern Miss faces a critical midweek tilt at Mississippi State (RPI 17), a key chance to reaffirm their top seed credentials against quality SEC opposition. Maintaining discipline and capitalizing on these pivotal matchups will be essential to sustaining their national seed status as the season progresses.</p></div>
 
   <div class="card col-4">
     <h2>Key Metrics</h2>
     <div class="metric-grid">
-      <div class="metric"><div class="val">#1 <span class="delta flat">--</span></div><div class="lbl">RPI Rank</div></div>
+      <div class="metric"><div class="val">#1 <span class="delta flat">--</span></div><div class="lbl"><span class="tip" data-tip="Rating Percentage Index. A formula the NCAA uses to rank teams based on win-loss record, strength of schedule, and opponent strength. Lower rank = better.">RPI Rank</span></div></div>
       <div class="metric"><div class="val">16-4</div><div class="lbl">Record</div></div>
-      <div class="metric"><div class="val">0.6909</div><div class="lbl">RPI Value</div></div>
-      <div class="metric"><div class="val">#2</div><div class="lbl">SOS Rank</div></div>
+      <div class="metric"><div class="val">0.6909</div><div class="lbl"><span class="tip" data-tip="The raw RPI number, typically between 0.45 and 0.75. Higher is better. Teams above ~0.62 are usually in the top 25.">RPI Value</span></div></div>
+      <div class="metric"><div class="val">#2</div><div class="lbl"><span class="tip" data-tip="Strength of Schedule rank. How tough your opponents are compared to the rest of the country. #1 means you play the hardest schedule in college baseball.">SOS Rank</span></div></div>
     </div>
   </div>
 
   <div class="card col-4">
-    <h2>Quadrant Records</h2>
-    <div class="q-row"><div class="q-card"><div class="q-label">Q1</div><div class="q-val">10-3</div></div><div class="q-card"><div class="q-label">Q2</div><div class="q-val">10-3</div></div><div class="q-card"><div class="q-label">Q3</div><div class="q-val">10-3</div></div><div class="q-card"><div class="q-label">Q4</div><div class="q-val">10-3</div></div></div>
+    <h2>Quadrant Records <span class="tip" data-tip="Games are graded Q1 through Q4 based on opponent RPI and game location. Q1 is the toughest (best wins), Q4 is easiest. The NCAA selection committee weighs Q1 wins heavily when seeding the tournament.">&#x24D8;</span></h2>
+    <div class="q-row"><div class="q-card"><div class="q-label"><span class="tip" data-tip="Toughest games. Home vs RPI 1-25, Neutral 1-40, Away 1-60. These wins matter most to the NCAA selection committee.">Q1</span></div><div class="q-val">10-3</div></div><div class="q-card"><div class="q-label"><span class="tip" data-tip="Solid games. Home vs RPI 26-50, Neutral 41-80, Away 61-120. Good wins, manageable losses.">Q2</span></div><div class="q-val">3-0</div></div><div class="q-card"><div class="q-label"><span class="tip" data-tip="Below-average games. Home vs RPI 51-100, Neutral 81-160, Away 121-240. Wins expected, losses hurt.">Q3</span></div><div class="q-val">0-0</div></div><div class="q-card"><div class="q-label"><span class="tip" data-tip="Weakest games. Home vs RPI 101+. Wins count little — losses here are most damaging.">Q4</span></div><div class="q-val">3-1</div></div></div>
     <div class="sos-note">Upcoming schedule is soft -- avg opponent RPI 87. Limited Q1/Q2 opportunities.</div>
   </div>
 
   <div class="card col-4">
-    <h2>Rank Trend (45 days)</h2>
+    <h2>Rank Trend (45 days) <span class="tip" data-tip="Daily RPI rank over the past 45 days. The Y-axis is inverted — lower on the chart means a better rank. Each dot is one day the bot ran.">&#x24D8;</span></h2>
     <canvas id="rankChart"></canvas>
   </div>
 
   <div class="card col-4">
     <h2>Why It Moved</h2>
-    <ul><li>RPI rank did not change from the prior snapshot.</li></ul>
+    <ul><li>RPI rank did not change from the prior snapshot.</li><li>Q2 record changed from 10-3 to 3-0.</li><li>Q3 record changed from 10-3 to 0-0.</li><li>Q4 record changed from 10-3 to 3-1.</li></ul>
   </div>
 
   <div class="card col-4">
-    <h2>RPI Radar</h2>
+    <h2>RPI Radar <span class="tip" data-tip="The teams ranked immediately above and below Southern Miss in live RPI. The YOU ARE HERE marker shows USM's current position.">&#x24D8;</span></h2>
     <ul class="radar-list"><li class="usm">#1 Southern Miss (Sun Belt) <span class="usm-tag">YOU ARE HERE</span></li><li class="">#2 Florida State (ACC)</li><li class="">#3 Auburn (SEC)</li><li class="">#4 Texas (SEC)</li><li class="">#5 USC</li></ul>
   </div>
 
   <div class="card col-4">
     <h2>Rival Watch</h2>
-    <table>
+    <div class="table-wrap"><table>
       <thead><tr><th>Team</th><th>Conf</th><th>RPI</th><th>Record</th></tr></thead>
       <tbody><tr><td>Ole Miss</td><td>SEC</td><td>#6</td><td>16-5</td></tr><tr><td>UC Santa Barbara</td><td>Big West</td><td>#7</td><td>14-4</td></tr><tr><td>Mississippi State</td><td>SEC</td><td>#17</td><td>16-4</td></tr><tr><td>Coastal Carolina</td><td>Sun Belt</td><td>#21</td><td>13-6</td></tr><tr><td>Arkansas State</td><td>Sun Belt</td><td>#23</td><td>15-6</td></tr><tr><td>LSU</td><td>SEC</td><td>#110</td><td>14-7</td></tr></tbody>
-    </table>
+    </table></div>
   </div>
 
   <div class="card col-6">
     <h2>Upcoming Games</h2>
-    <table>
+    <div class="table-wrap"><table>
       <thead><tr><th>Opponent</th><th>Site</th><th>Opp RPI</th><th>Quadrant</th><th>Time</th></tr></thead>
-      <tbody><tr><td>Nicholls <small class='conf-tag'>(Southland)</small></td><td>Neutral</td><td>152</td><td><span class='q-badge q3'>Q3</span></td><td>7:00 PM</td></tr><tr><td>Troy <small class='conf-tag'>(Sun Belt)</small></td><td>Home</td><td>89</td><td><span class='q-badge q3'>Q3</span></td><td>7:00 PM</td></tr><tr><td>Troy <small class='conf-tag'>(Sun Belt)</small></td><td>Home</td><td>89</td><td><span class='q-badge q3'>Q3</span></td><td>3:00 PM</td></tr><tr><td>Troy <small class='conf-tag'>(Sun Belt)</small></td><td>Home</td><td>89</td><td><span class='q-badge q3'>Q3</span></td><td>2:00 PM</td></tr><tr><td># 6</td><td>Away</td><td>17</td><td><span class='q-badge q1'>Q1</span></td><td>7:00 PM</td></tr></tbody>
-    </table>
+      <tbody><tr><td>Nicholls <small class='conf-tag'>(Southland)</small></td><td>Neutral</td><td>152</td><td><span class='q-badge q3'>Q3</span></td><td>7:00 PM</td></tr><tr><td>Troy <small class='conf-tag'>(Sun Belt)</small></td><td>Home</td><td>89</td><td><span class='q-badge q3'>Q3</span></td><td>7:00 PM</td></tr><tr><td>Troy <small class='conf-tag'>(Sun Belt)</small></td><td>Home</td><td>89</td><td><span class='q-badge q3'>Q3</span></td><td>3:00 PM</td></tr><tr><td>Troy <small class='conf-tag'>(Sun Belt)</small></td><td>Home</td><td>89</td><td><span class='q-badge q3'>Q3</span></td><td>2:00 PM</td></tr><tr><td>Mississippi State <small class='conf-tag'>(SEC)</small></td><td>Away</td><td>17</td><td><span class='q-badge q1'>Q1</span></td><td>7:00 PM</td></tr></tbody>
+    </table></div>
   </div>
 
   <div class="card col-6">
     <h2>Recent Results</h2>
-    <table>
+    <div class="table-wrap"><table>
       <thead><tr><th>Opponent</th><th>Result</th><th>Site</th><th>Opp RPI</th></tr></thead>
       <tbody><tr><td>North Alabama</td><td class='win'>W 9-4</td><td>Home</td><td>147</td></tr><tr><td>North Alabama</td><td class='win'>W 6-1</td><td>Home</td><td>147</td></tr><tr><td>North Alabama</td><td class='win'>W 9-2</td><td>Home</td><td>147</td></tr><tr><td>Ole Miss</td><td class='win'>W 2-1</td><td>Home</td><td>6</td></tr><tr><td>Arkansas State</td><td class='loss'>L 5-8</td><td>Away</td><td>23</td></tr><tr><td>Arkansas State</td><td class='win'>W 7-1</td><td>Away</td><td>23</td></tr><tr><td>Arkansas State</td><td class='loss'>L 2-5</td><td>Away</td><td>23</td></tr></tbody>
-    </table>
+    </table></div>
   </div>
 
   <div class="card col-6">
@@ -162,6 +241,73 @@ Confidence remains high in Southern Miss’s positioning. Maintaining momentum t
     <h2>Week in Review</h2>
     <div class="week-box">Week in Review (2026-03-12 to 2026-03-17)<br>  Rank: 1 -> 1  (0)<br>  Record: 15-2 -> 16-4  (+1W / +2L)<br>  RPI Value: 0.7276 -> 0.6909<br>  SOS Rank: 2 -> 2</div>
   </div>
+
+  
+  <div class="card col-12" style="border-color:#2a2a00;">
+    <h2 style="color:#f5c518;">What-If Scenarios <span class="tip" data-tip="Directional projections of how Southern Miss RPI rank could move based on winning or losing each upcoming game or series. Not a simulation — shows relative stakes.">&#x24D8;</span></h2>
+    <div class="wi-cards-row">
+                <div class="wi-card">
+                  <div class="wi-header">
+                    <span class="wi-opp">Nicholls <small class="conf-tag">(Southland)</small></span>
+                    <span class="wi-meta">Neutral &nbsp;|&nbsp; Opp RPI #152 &nbsp;|&nbsp; 7:00 PM</span>
+                    <span class="q-badge q3">Q3</span>
+                    <span class="stakes-badge" style="background:#ffa94022;color:#ffa940;border:1px solid #ffa94044">LOW STAKES</span>
+                  </div>
+                  <p class="gpt-stake">Southern Miss risks damaging its tournament resume with no RPI gain in a potential upset against low-ranked Nicholls.</p>
+                  <div class="wi-outcomes">
+                    <div class="wi-outcome win-outcome">
+                      <div class="wi-label"><span class="tip" data-tip="Projected RPI rank if Southern Miss wins this game or sweeps this series.">IF WIN</span></div>
+                      <div class="wi-rank">#1</div>
+                      <div class="wi-delta up">-- 0 spots</div>
+                    </div>
+                    <div class="wi-vs">VS</div>
+                    <div class="wi-outcome loss-outcome">
+                      <div class="wi-label"><span class="tip" data-tip="Projected RPI rank if Southern Miss loses this game or gets swept in this series.">IF LOSS</span></div>
+                      <div class="wi-rank">#1</div>
+                      <div class="wi-delta down">-- 0 spots</div>
+                      <div class="wi-upset-warn">&#9888; Resume damage</div>
+                    </div>
+                  </div>
+                </div>
+                <div class="wi-card">
+                  <div class="wi-header">
+                    <span class="wi-opp">Troy (3-game series) <small class="conf-tag">(Sun Belt)</small></span>
+                    <span class="wi-meta">Home &nbsp;|&nbsp; Opp RPI #89 &nbsp;|&nbsp; 7:00 PM</span>
+                    <span class="q-badge q3">Q3</span>
+                    <span class="stakes-badge" style="background:#ffa94022;color:#ffa940;border:1px solid #ffa94044">LOW STAKES</span>
+                  </div>
+                  <p class="gpt-stake">Southern Miss must sweep Troy to retain RPI #1; a sweep loss drops them to #2 immediately.</p>
+                  <div class="wi-outcomes">
+                    <div class="wi-outcome win-outcome">
+                      <div class="wi-label"><span class="tip" data-tip="Projected RPI rank if Southern Miss wins this game or sweeps this series.">IF WIN</span></div>
+                      <div class="wi-rank">#1</div>
+                      <div class="wi-delta up">-- 0 spots</div>
+                    </div>
+                    <div class="wi-vs">VS</div>
+                    <div class="wi-outcome loss-outcome">
+                      <div class="wi-label"><span class="tip" data-tip="Projected RPI rank if Southern Miss loses this game or gets swept in this series.">IF LOSS</span></div>
+                      <div class="wi-rank">#2</div>
+                      <div class="wi-delta down">▼ 1 spot</div>
+                      
+                    </div>
+                  </div>
+                </div></div>
+    <div style="margin-top:20px;">
+      <div style="font-size:0.72rem;color:#666;text-transform:uppercase;letter-spacing:1px;margin-bottom:8px;">Full Schedule Scenario Matrix</div>
+      <div class="table-wrap">
+            <table>
+              <thead>
+                <tr>
+                  <th>Opponent</th><th>Site</th><th>Opp RPI</th><th>Quadrant</th>
+                  <th style="color:#00c853">If Win</th><th style="color:#ff4d4f">If Loss</th>
+                </tr>
+              </thead>
+              <tbody><tr><td>Nicholls <small class='conf-tag'>(Southland)</small></td><td>Neutral</td><td>#152</td><td><span class='q-badge q3'>Q3</span></td><td class=''>#1 (+0)</td><td class=''>#1 (-0) <span class='wi-upset-tag'>resume</span></td></tr><tr><td>Troy (3-game series) <small class='conf-tag'>(Sun Belt)</small></td><td>Home</td><td>#89</td><td><span class='q-badge q3'>Q3</span></td><td class=''>#1 (+0)</td><td class='loss'>#2 (-1)</td></tr><tr><td>Mississippi State <small class='conf-tag'>(SEC)</small></td><td>Away</td><td>#17</td><td><span class='q-badge q1'>Q1</span></td><td class=''>#1 (+0)</td><td class='loss'>#2 (-1)</td></tr></tbody>
+            </table></div>
+    </div>
+    <p style="font-size:0.7rem;color:#555;margin-top:12px;">Projections are directional estimates based on RPI weight modeling. Not a simulation.</p>
+  </div>
+
 
 </div>
 
