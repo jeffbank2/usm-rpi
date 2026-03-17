@@ -3,13 +3,11 @@ Collecting rival snapshots (6 teams)...
 Generating GPT narrative...
 
 --- GPT Narrative ---
-Southern Miss maintains its dominant No. 1 RPI ranking with a 16-4 overall record, despite a slight dip in RPI value from 0.7275 to 0.6909 following a 2-1 loss at Arkansas State (RPI 22). The Golden Eagles’ strength of schedule remains elite at second nationally, though the SOS value has decreased slightly to 0.6576 as upcoming opponents represent a softer slate with an average RPI near 87.
+Southern Miss remains firmly entrenched as the No. 1 team in the RPI rankings with a 16-4 overall record, despite a slight dip in RPI value from 0.7275 to 0.6909. This stability is maintained even after a challenging series at Arkansas State, where the Golden Eagles dropped two games to an RPI 22 opponent, tempering their previously dominant Q1 mark from 9-1 to 10-3 and resulting in their current 1-2 conference record. The team's strength of schedule holds steady at second nationally but has softened slightly, reflecting an upcoming slate that features mostly mid-to-low-tier opponents with an average RPI near 87, offering limited chances for quality wins to bolster their profile further.
 
-The team’s Q1 record has shifted to 10-3, reflecting the recent conference losses, while Q2 is a perfect 3-0 and Q4 stands at 3-1, showing consistency across key segments. Despite three Sun Belt losses thus far in conference play (1-2), Southern Miss’s overall profile—and quality wins, including a narrow home victory over Ole Miss (RPI 5)—cements its standing firmly in national seed territory.
+Southern Miss’s resilience is clear, holding the top RPI position against formidable peers like Ole Miss (RPI 5) and Mississippi State (RPI 18). Their recent home victory over Ole Miss underscores their top-tier status, but the losses at Arkansas State serve as a reminder of the need for consistent execution.
 
-Looking ahead, Southern Miss faces a manageable stretch starting with Nicholls (RPI 152) on neutral ground, followed by a crucial home series against Troy (RPI 88). These games offer limited opportunities to improve Q1/Q2 résumé but are key for stabilizing momentum before a tougher road matchup at Mississippi State (RPI 18) on March 24.
-
-While the recent loss poses a minor threat, the Golden Eagles’ strong win total and SOS support their assured position. Maintaining focus and capitalizing on upcoming series will be critical to preserving the top RPI seed status.
+The next series against Nicholls (neutral, RPI 152) and a home series versus Troy (RPI 88) offer Southern Miss opportunities to build confidence but little upward mobility in RPI points. The true test looms on March 24 in Starkville against No. 6 Mississippi State, a matchup that could reinforce Southern Miss’s national seed credentials or reveal vulnerabilities to be addressed. Given their current standing and schedule, Southern Miss is confidently positioned in national seed territory, though they must avoid further setbacks to secure host sites for postseason play.
 ---------------------
 
 Southern Miss RPI Daily Brief | 2026-03-16
