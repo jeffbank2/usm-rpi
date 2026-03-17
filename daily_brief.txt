@@ -3,27 +3,27 @@ Collecting rival snapshots (6 teams)...
 Generating GPT narrative...
 
 --- GPT Narrative ---
-Southern Miss currently sits firmly atop the national RPI rankings at No. 1 with a robust 16-4 overall record. This establishes them as a clear national seed contender thanks to their elite 0.6909 RPI value and the nation’s second-best strength of schedule at 0.6576. Their recent 3-0 sweep of North Alabama and clutch 2-1 home win over No. 5 Ole Miss boosted their RPI, although a 1-2 conference start and two tough losses at Arkansas State slightly temper momentum.
+Southern Miss remains firmly atop the RPI rankings at No. 1 with a steady 16-4 overall record and a strength of schedule ranked second nationally. The team held its position after recent results, including a tight 2-1 victory over No. 6 Ole Miss at home and a tough three-game series on the road against No. 23 Arkansas State, which resulted in two losses but one solid win. While Southern Miss’s conference record sits at 1-2, their dominant early-season wins against quality opponents have sustained their top RPI mark of 0.6909. 
 
-While Southern Miss’s strength of schedule is excellent overall, the immediate outlook reveals a soft upcoming slate—with opponents averaging an RPI around 87—limiting further Q1 and Q2 opportunities. This softness could challenge their grip on the top spot unless they capitalize with consistent wins on the road and neutral sites. Next up is a neutral-site game versus low-RPI Nicholls, followed by a home series against Troy, both teams with sub-100 RPIs, offering Southern Miss a chance to maintain their winning ways but limited chances to improve their RPI significantly. A key test looms on March 24 at No. 18 Mississippi State, presenting an opportunity to shore up their Q1 résumé and reinforce their position as the nation’s top seed.
+Despite this strength, the upcoming schedule poses some challenges. Southern Miss faces an overall soft slate with an average opponent RPI around 87, limiting further chances to boost their resume with more Quadrant 1 or 2 wins. They begin with a neutral-site game against Nicholls (RPI 152), followed by a three-game home series versus Troy (RPI 89), both lower-tier opponents. A key test awaits next week on the road at No. 17 Mississippi State in Starkville, presenting a critical opportunity to reinforce their national seed standing.
 
-Southern Miss sits confident in the driver’s seat for a top national seed. Maintaining focus through these upcoming games against softer competition and seizing moments against quality opponents will safeguard this premier status.
+Southern Miss’s position as the top-ranked RPI team is secure for now, but maintaining this status will depend on capitalizing against upcoming mid-tier foes and delivering a statement performance at Mississippi State. Their national seed prospects remain strong and well within reach heading into this pivotal stretch.
 ---------------------
 
-Southern Miss RPI Daily Brief | 2026-03-16
+Southern Miss RPI Daily Brief | 2026-03-17
 
-RPI Rank:  1
-RPI Value: 0.6909
-SOS Rank:  2
-Record:    16-4
+RPI Rank:  1 -> 1
+RPI Value: 0.6909 -> 0.6909
+SOS Rank:  2 -> 2
+Record:    16-4 -> 16-4
 
 Host Outlook: National seed territory
 
 Trend Summary:
-- No trend available yet.
+- Flat in rank, record changed +0W / +0L.
 
 Why it moved:
-- No prior snapshot exists yet. Today's run establishes the baseline.
+- RPI rank did not change from the prior snapshot.
 
 SOS Trajectory: Upcoming schedule is soft -- avg opponent RPI 87. Limited Q1/Q2 opportunities.
 
@@ -34,14 +34,17 @@ RPI Radar:
 - #4 Texas (SEC)
 
 Impact Games / Watchlist:
+- Impact page includes direct games against Southern Miss and indirect games involving prior opponents.
+- Upcoming: Nicholls (neutral, RPI 152, Southland, Q3).
+- Upcoming: Troy (home, RPI 89, Sun Belt, Q3).
 
 Rival Watch:
-- Ole Miss (SEC): RPI #5, 16-5
+- Ole Miss (SEC): RPI #6, 16-5
 - UC Santa Barbara (Big West): RPI #7, 14-4
-- Mississippi State (SEC): RPI #18, 16-4
+- Mississippi State (SEC): RPI #17, 16-4
 - Coastal Carolina (Sun Belt): RPI #21, 13-6
-- Arkansas State (Sun Belt): RPI #22, 15-6
-- LSU (SEC): RPI #111, 14-7
+- Arkansas State (Sun Belt): RPI #23, 15-6
+- LSU (SEC): RPI #110, 14-7
 Building what-if scenarios...
 
 Dashboard saved: C:\Users\jeffb\Desktop\SouthernMissRPIBot\index.html
