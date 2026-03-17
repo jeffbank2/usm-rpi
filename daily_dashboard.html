@@ -14,142 +14,541 @@
 <link rel="icon" type="image/jpeg" href="RPI_Logo.jpg">
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
 <style>
-@import url('https://fonts.googleapis.com/css2?family=Bebas+Neue&family=DM+Sans:ital,wght@0,300;0,400;0,500;0,700;1,400&family=DM+Mono:wght@400;500&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Bebas+Neue&family=DM+Sans:ital,opsz,wght@0,9..40,300;0,9..40,400;0,9..40,500;0,9..40,700;1,9..40,400&family=DM+Mono:wght@400;500&display=swap');
+
+/* ── Design tokens ─────────────────────────────────────────────── */
 :root {
-  --gold: #f5c518; --black: #0a0a0a; --dark: #111; --card: #181818;
-  --border: #262626; --text: #e2e2e2; --muted: #777; --status: #00c853;
+  --gold: #f5c518;
+  --gold-dim: #c49d10;
+  --gold-glow: rgba(245,197,24,0.18);
+  --black: #080808;
+  --surface-0: #0e0e0e;
+  --surface-1: #141414;
+  --surface-2: #1c1c1c;
+  --border: #242424;
+  --border-hi: #333;
+  --text: #e8e8e8;
+  --text-2: #aaa;
+  --muted: #666;
+  --green: #22c55e;
+  --green-dim: rgba(34,197,94,0.12);
+  --green-border: rgba(34,197,94,0.3);
+  --red: #ef4444;
+  --red-dim: rgba(239,68,68,0.12);
+  --red-border: rgba(239,68,68,0.3);
+  --amber: #f59e0b;
+  --blue: #60a5fa;
+  --status: #00c853;
+  --radius-sm: 6px;
+  --radius-md: 10px;
+  --radius-lg: 14px;
+  --shadow-card: 0 1px 3px rgba(0,0,0,0.5), 0 4px 16px rgba(0,0,0,0.3);
+  --shadow-hover: 0 2px 8px rgba(0,0,0,0.6), 0 8px 32px rgba(0,0,0,0.4);
+  --transition: 150ms cubic-bezier(0.4,0,0.2,1);
 }
-* { box-sizing: border-box; margin: 0; padding: 0; }
-body { background: var(--black); color: var(--text); font-family: 'DM Sans', sans-serif; font-size: 14px; line-height: 1.6; }
+
+/* ── Reset ─────────────────────────────────────────────────────── */
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+html { -webkit-font-smoothing: antialiased; text-rendering: optimizeLegibility; }
+body {
+  background: var(--black);
+  color: var(--text);
+  font-family: 'DM Sans', system-ui, sans-serif;
+  font-size: 14px;
+  line-height: 1.65;
+  min-height: 100vh;
+}
+
+/* ── Page fade-in ──────────────────────────────────────────────── */
+@keyframes fadeUp {
+  from { opacity: 0; transform: translateY(10px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+.grid > * {
+  animation: fadeUp 0.4s ease both;
+}
+.grid > *:nth-child(1)  { animation-delay: 0.05s; }
+.grid > *:nth-child(2)  { animation-delay: 0.10s; }
+.grid > *:nth-child(3)  { animation-delay: 0.15s; }
+.grid > *:nth-child(4)  { animation-delay: 0.18s; }
+.grid > *:nth-child(5)  { animation-delay: 0.21s; }
+.grid > *:nth-child(6)  { animation-delay: 0.24s; }
+.grid > *:nth-child(7)  { animation-delay: 0.27s; }
+.grid > *:nth-child(8)  { animation-delay: 0.30s; }
+.grid > *:nth-child(9)  { animation-delay: 0.33s; }
+.grid > *:nth-child(10) { animation-delay: 0.36s; }
+
+/* ── Header ────────────────────────────────────────────────────── */
 header {
-  background: linear-gradient(135deg, #0a0a0a 50%, #1a1200 100%);
-  border-bottom: 3px solid var(--gold);
-  padding: 24px 36px 20px;
-  display: flex; justify-content: space-between; align-items: flex-end;
+  background: linear-gradient(160deg, #0c0c0c 40%, #16110000 100%),
+              linear-gradient(to right, #0e0e0e, #130f00);
+  border-bottom: 1px solid var(--border);
+  box-shadow: 0 1px 0 rgba(245,197,24,0.15), 0 4px 24px rgba(0,0,0,0.6);
+  padding: 22px 36px 18px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 16px;
+  position: sticky;
+  top: 0;
+  z-index: 100;
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
 }
-header h1 { font-family: 'Bebas Neue', sans-serif; font-size: 2.8rem; color: var(--gold); letter-spacing: 2px; line-height: 1; }
-header p  { color: var(--muted); font-size: 0.72rem; letter-spacing: 3px; text-transform: uppercase; margin-top: 4px; }
+.header-left { display: flex; align-items: center; gap: 18px; }
+.header-logo {
+  width: 56px; height: 56px;
+  border-radius: var(--radius-md);
+  object-fit: cover;
+  border: 1.5px solid rgba(245,197,24,0.4);
+  box-shadow: 0 0 0 3px rgba(245,197,24,0.08), 0 4px 12px rgba(0,0,0,0.5);
+  flex-shrink: 0;
+  transition: box-shadow var(--transition);
+}
+.header-logo:hover { box-shadow: 0 0 0 3px rgba(245,197,24,0.2), 0 4px 16px rgba(245,197,24,0.15); }
+header h1 {
+  font-family: 'Bebas Neue', sans-serif;
+  font-size: 2.4rem;
+  color: var(--gold);
+  letter-spacing: 2px;
+  line-height: 1;
+  text-shadow: 0 0 30px rgba(245,197,24,0.2);
+}
+header p {
+  color: var(--muted);
+  font-size: 0.68rem;
+  letter-spacing: 2.5px;
+  text-transform: uppercase;
+  margin-top: 3px;
+  font-weight: 500;
+}
 .status-badge {
-  background: var(--status); color: #000;
-  font-family: 'Bebas Neue', sans-serif; font-size: 1rem;
-  padding: 6px 14px; border-radius: 4px; letter-spacing: 1px;
+  background: var(--status);
+  color: #000;
+  font-family: 'Bebas Neue', sans-serif;
+  font-size: 0.9rem;
+  padding: 7px 16px;
+  border-radius: var(--radius-sm);
+  letter-spacing: 1.5px;
+  white-space: nowrap;
+  box-shadow: 0 2px 12px rgba(0,0,0,0.4);
+  flex-shrink: 0;
 }
+
+/* ── Grid ──────────────────────────────────────────────────────── */
 .grid {
-  display: grid; grid-template-columns: repeat(12, 1fr);
-  gap: 14px; padding: 20px 36px; max-width: 1500px; margin: 0 auto;
+  display: grid;
+  grid-template-columns: repeat(12, 1fr);
+  gap: 14px;
+  padding: 20px 28px 32px;
+  max-width: 1520px;
+  margin: 0 auto;
 }
 .col-4  { grid-column: span 4; }
 .col-6  { grid-column: span 6; }
 .col-8  { grid-column: span 8; }
 .col-12 { grid-column: span 12; }
-@media (max-width: 900px) { .col-4,.col-6,.col-8 { grid-column: span 12; } }
-@media (max-width: 600px) {
-  .grid { padding: 10px 12px; gap: 10px; }
-  header { padding: 14px 16px 12px; flex-wrap: wrap; gap: 8px; }
-  header h1 { font-size: 1.9rem; }
-  .status-badge { font-size: 0.8rem; padding: 4px 10px; }
-  footer { padding: 14px 16px; }
+
+/* ── Cards ─────────────────────────────────────────────────────── */
+.card {
+  background: var(--surface-1);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  padding: 18px 20px;
+  box-shadow: var(--shadow-card);
+  transition: border-color var(--transition), box-shadow var(--transition), transform var(--transition);
 }
-.card { background: var(--card); border: 1px solid var(--border); border-radius: 8px; padding: 18px 22px; }
-@media (max-width: 600px) { .card { padding: 14px 14px; } }
+.card:hover {
+  border-color: var(--border-hi);
+  box-shadow: var(--shadow-hover);
+  transform: translateY(-1px);
+}
 .card h2 {
-  font-family: 'Bebas Neue', sans-serif; font-size: 0.9rem;
-  letter-spacing: 2px; color: var(--gold); text-transform: uppercase;
-  margin-bottom: 14px; border-bottom: 1px solid var(--border); padding-bottom: 8px;
+  font-family: 'Bebas Neue', sans-serif;
+  font-size: 0.78rem;
+  letter-spacing: 2.5px;
+  color: var(--gold);
+  text-transform: uppercase;
+  margin-bottom: 14px;
+  padding-bottom: 9px;
+  border-bottom: 1px solid var(--border);
+  display: flex;
+  align-items: center;
+  gap: 6px;
 }
-.metric-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
-.metric { background: var(--dark); border-radius: 6px; padding: 14px; text-align: center; }
-.metric .val { font-family: 'Bebas Neue', sans-serif; font-size: 2.2rem; color: var(--gold); line-height: 1; }
-.metric .lbl { font-size: 0.65rem; color: var(--muted); text-transform: uppercase; letter-spacing: 1px; margin-top: 3px; }
-.delta { font-size: 0.85rem; font-weight: 700; margin-left: 5px; }
-.delta.up   { color: #00c853; }
-.delta.down { color: #ff4d4f; }
-.delta.flat { color: var(--muted); }
-canvas { max-height: 190px; }
+
+/* ── Metrics ───────────────────────────────────────────────────── */
+.metric-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+.metric {
+  background: var(--surface-0);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  padding: 14px 10px;
+  text-align: center;
+  transition: border-color var(--transition), background var(--transition);
+  position: relative;
+  overflow: hidden;
+}
+.metric::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: radial-gradient(ellipse at 50% 0%, rgba(245,197,24,0.04) 0%, transparent 70%);
+  pointer-events: none;
+}
+.metric:hover { border-color: rgba(245,197,24,0.2); background: #101010; }
+.metric .val {
+  font-family: 'Bebas Neue', sans-serif;
+  font-size: 2.1rem;
+  color: var(--gold);
+  line-height: 1;
+  letter-spacing: 1px;
+}
+.metric .lbl {
+  font-size: 0.62rem;
+  color: var(--muted);
+  text-transform: uppercase;
+  letter-spacing: 1.2px;
+  margin-top: 4px;
+  font-weight: 500;
+}
+
+/* ── Delta badges ──────────────────────────────────────────────── */
+.delta {
+  font-size: 0.75rem;
+  font-weight: 700;
+  margin-left: 4px;
+  padding: 1px 5px;
+  border-radius: 4px;
+  vertical-align: middle;
+}
+.delta.up   { color: var(--green); background: var(--green-dim); }
+.delta.down { color: var(--red);   background: var(--red-dim); }
+.delta.flat { color: var(--muted); background: var(--surface-2); }
+
+/* ── Chart ─────────────────────────────────────────────────────── */
+canvas { max-height: 200px; }
+
+/* ── Lists ─────────────────────────────────────────────────────── */
 ul { list-style: none; padding: 0; }
-ul li { padding: 6px 0; border-bottom: 1px solid var(--border); font-size: 0.84rem; color: #ccc; }
-ul li:last-child { border-bottom: none; }
-ul.radar-list li { font-family: 'DM Mono', monospace; font-size: 0.82rem; }
-ul.radar-list li.usm { color: var(--gold); font-weight: 500; }
-.usm-tag { background: var(--gold); color: #000; font-size: 0.6rem; padding: 1px 5px; border-radius: 3px; margin-left: 6px; font-family: 'DM Sans', sans-serif; font-weight: 700; letter-spacing: 0.5px; vertical-align: middle; }
-table { width: 100%; border-collapse: collapse; font-size: 0.83rem; }
-th { color: var(--muted); font-weight: 500; text-align: left; padding: 5px 8px; border-bottom: 1px solid var(--border); font-size: 0.7rem; text-transform: uppercase; letter-spacing: 0.5px; }
-td { padding: 7px 8px; border-bottom: 1px solid #1e1e1e; }
-tr:last-child td { border-bottom: none; }
-.win  { color: #00c853; font-weight: 600; }
-.loss { color: #ff4d4f; font-weight: 600; }
-.q-row { display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 12px; }
-.q-card { flex: 1; min-width: 55px; background: var(--dark); border-radius: 6px; padding: 10px 6px; text-align: center; }
-.q-label { font-size: 0.65rem; color: var(--muted); text-transform: uppercase; letter-spacing: 1px; }
-.q-val   { font-family: 'Bebas Neue', sans-serif; font-size: 1.35rem; color: var(--gold); }
-.q-badge { display: inline-block; padding: 2px 6px; border-radius: 3px; font-size: 0.72rem; font-weight: 600; }
-.q1 { background: #00c85322; color: #00c853; border: 1px solid #00c85344; }
-.q2 { background: #69c0ff22; color: #69c0ff; border: 1px solid #69c0ff44; }
-.q3 { background: #ffa94022; color: #ffa940; border: 1px solid #ffa94044; }
-.q4 { background: #ff4d4f22; color: #ff4d4f; border: 1px solid #ff4d4f44; }
-.quadrantunknown { background: #33333322; color: #888; border: 1px solid #333; }
-.narrative { background: linear-gradient(135deg, #1a1400 0%, #181818 60%); border-color: #3a2e00; }
-.narrative h2 { color: var(--gold); border-color: #3a2e00; }
-.narrative p { font-size: 1.05rem; line-height: 1.85; color: #e0e0e0; font-style: normal; max-width: 960px; }
-.week-box { background: var(--dark); border-radius: 6px; padding: 12px 16px; font-family: 'DM Mono', monospace; font-size: 0.8rem; color: #bbb; line-height: 1.9; }
-.sos-note { background: #1a1300; border-left: 3px solid var(--gold); padding: 9px 12px; border-radius: 0 6px 6px 0; font-size: 0.84rem; color: #ccc; }
-.conf-tag { color: var(--muted); font-size: 0.75em; }
-.wi-cards-row { display: flex; gap: 16px; flex-wrap: wrap; }
-.wi-card { flex: 1; min-width: 280px; background: var(--dark); border-radius: 8px; padding: 16px; border: 1px solid #2a2a00; }
-@media (max-width: 600px) { .wi-card { min-width: 100%; padding: 12px; } }
-.wi-header { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; margin-bottom: 10px; }
-.wi-opp { font-weight: 600; font-size: 1rem; color: var(--text); }
-.wi-meta { font-size: 0.75rem; color: var(--muted); width: 100%; }
-@media (max-width: 600px) { .wi-meta { font-size: 0.7rem; } }
-.stakes-badge { font-size: 0.65rem; font-weight: 700; padding: 2px 7px; border-radius: 3px; letter-spacing: 0.5px; }
-.gpt-stake { font-style: italic; font-size: 0.88rem; color: #bbb; margin-bottom: 12px; border-left: 2px solid #3a2e00; padding-left: 10px; }
-.wi-outcomes { display: flex; align-items: center; gap: 12px; }
-.wi-outcome { flex: 1; text-align: center; padding: 12px; border-radius: 6px; }
-@media (max-width: 400px) { .wi-outcome { padding: 8px 6px; } }
-.win-outcome  { background: #00c85312; border: 1px solid #00c85333; }
-.loss-outcome { background: #ff4d4f12; border: 1px solid #ff4d4f33; }
-.wi-label { font-size: 0.65rem; text-transform: uppercase; letter-spacing: 1px; color: var(--muted); }
-.wi-rank  { font-family: 'Bebas Neue', sans-serif; font-size: 2rem; line-height: 1; color: var(--gold); margin: 4px 0; }
-.wi-delta { font-size: 0.8rem; font-weight: 700; }
-.wi-delta.up   { color: #00c853; }
-.wi-delta.down { color: #ff4d4f; }
-.wi-delta.flat { color: var(--muted); }
-.wi-vs { font-family: 'Bebas Neue', sans-serif; font-size: 1.2rem; color: var(--muted); flex-shrink: 0; }
-.wi-upset-warn { font-size: 0.72rem; font-weight: 600; color: #ffa940; margin-top: 6px; letter-spacing: 0.5px; background: #ffa94015; border: 1px solid #ffa94033; border-radius: 4px; padding: 3px 7px; display: inline-block; }
-.wi-upset-tag { font-size: 0.65rem; font-weight: 600; color: #ffa940; border: 1px solid #ffa94044; background: #ffa94022; padding: 1px 5px; border-radius: 3px; margin-left: 4px; white-space: nowrap; }
-.wi-matrix-wrap { overflow-x: auto; -webkit-overflow-scrolling: touch; margin: 0 -14px; padding: 0 14px; }
-.wi-matrix-wrap table { min-width: 480px; }
-.wi-matrix-wrap td:first-child { white-space: nowrap; max-width: 160px; overflow: hidden; text-overflow: ellipsis; }
-@media (max-width: 600px) {
-  .wi-matrix-wrap td:first-child { max-width: 110px; font-size: 0.78rem; }
-  .wi-matrix-wrap td, .wi-matrix-wrap th { padding: 6px 6px; font-size: 0.75rem; }
+ul li {
+  padding: 7px 0;
+  border-bottom: 1px solid var(--border);
+  font-size: 0.84rem;
+  color: var(--text-2);
+  line-height: 1.5;
+  transition: color var(--transition);
 }
-/* Tooltips */
+ul li:hover { color: var(--text); }
+ul li:last-child { border-bottom: none; }
+ul.radar-list li {
+  font-family: 'DM Mono', monospace;
+  font-size: 0.8rem;
+  padding: 6px 0;
+}
+ul.radar-list li.usm { color: var(--gold); font-weight: 500; }
+.usm-tag {
+  background: var(--gold);
+  color: #000;
+  font-size: 0.58rem;
+  padding: 1px 5px;
+  border-radius: 3px;
+  margin-left: 7px;
+  font-family: 'DM Sans', sans-serif;
+  font-weight: 700;
+  letter-spacing: 0.5px;
+  vertical-align: middle;
+  text-transform: uppercase;
+}
+
+/* ── Tables ────────────────────────────────────────────────────── */
+table { width: 100%; border-collapse: collapse; font-size: 0.82rem; }
+th {
+  color: var(--muted);
+  font-weight: 600;
+  text-align: left;
+  padding: 5px 8px 7px;
+  border-bottom: 1px solid var(--border);
+  font-size: 0.66rem;
+  text-transform: uppercase;
+  letter-spacing: 0.8px;
+}
+td {
+  padding: 8px 8px;
+  border-bottom: 1px solid rgba(255,255,255,0.04);
+  vertical-align: middle;
+}
+tr { transition: background var(--transition); }
+tr:hover td { background: rgba(255,255,255,0.02); }
+tr:last-child td { border-bottom: none; }
+.win  { color: var(--green); font-weight: 600; }
+.loss { color: var(--red);   font-weight: 600; }
+
+/* ── Quadrant records ──────────────────────────────────────────── */
+.q-row { display: flex; gap: 7px; flex-wrap: wrap; margin-bottom: 14px; }
+.q-card {
+  flex: 1;
+  min-width: 52px;
+  background: var(--surface-0);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  padding: 10px 6px;
+  text-align: center;
+  transition: border-color var(--transition), transform var(--transition);
+}
+.q-card:hover { border-color: var(--border-hi); transform: translateY(-2px); }
+.q-label { font-size: 0.62rem; color: var(--muted); text-transform: uppercase; letter-spacing: 1px; font-weight: 500; }
+.q-val   { font-family: 'Bebas Neue', sans-serif; font-size: 1.3rem; color: var(--gold); margin-top: 2px; }
+.q-badge { display: inline-block; padding: 2px 7px; border-radius: 4px; font-size: 0.7rem; font-weight: 700; letter-spacing: 0.3px; }
+.q1 { background: rgba(34,197,94,0.1);  color: #22c55e; border: 1px solid rgba(34,197,94,0.25); }
+.q2 { background: rgba(96,165,250,0.1); color: #60a5fa; border: 1px solid rgba(96,165,250,0.25); }
+.q3 { background: rgba(245,158,11,0.1); color: #f59e0b; border: 1px solid rgba(245,158,11,0.25); }
+.q4 { background: rgba(239,68,68,0.1);  color: #ef4444; border: 1px solid rgba(239,68,68,0.25); }
+.quadrantunknown { background: rgba(255,255,255,0.04); color: var(--muted); border: 1px solid var(--border); }
+
+/* ── Narrative card ────────────────────────────────────────────── */
+.narrative {
+  background: linear-gradient(135deg, #110d00 0%, var(--surface-1) 55%);
+  border-color: rgba(245,197,24,0.2);
+  box-shadow: var(--shadow-card), inset 0 1px 0 rgba(245,197,24,0.06);
+}
+.narrative:hover { border-color: rgba(245,197,24,0.35); }
+.narrative h2 { color: var(--gold); border-color: rgba(245,197,24,0.15); }
+.narrative p {
+  font-size: 1rem;
+  line-height: 1.9;
+  color: #d8d8d8;
+  max-width: 960px;
+  font-weight: 300;
+}
+
+/* ── Misc content blocks ───────────────────────────────────────── */
+.week-box {
+  background: var(--surface-0);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  padding: 13px 16px;
+  font-family: 'DM Mono', monospace;
+  font-size: 0.78rem;
+  color: #bbb;
+  line-height: 2;
+}
+.sos-note {
+  background: rgba(245,197,24,0.04);
+  border-left: 3px solid var(--gold);
+  padding: 10px 14px;
+  border-radius: 0 var(--radius-sm) var(--radius-sm) 0;
+  font-size: 0.83rem;
+  color: var(--text-2);
+  line-height: 1.55;
+}
+.conf-tag { color: var(--muted); font-size: 0.75em; font-weight: 400; }
+
+/* ── What-If cards ─────────────────────────────────────────────── */
+.wi-cards-row { display: flex; gap: 14px; flex-wrap: wrap; }
+.wi-card {
+  flex: 1;
+  min-width: 280px;
+  background: var(--surface-0);
+  border: 1px solid rgba(245,197,24,0.12);
+  border-radius: var(--radius-md);
+  padding: 16px;
+  transition: border-color var(--transition), box-shadow var(--transition), transform var(--transition);
+}
+.wi-card:hover {
+  border-color: rgba(245,197,24,0.25);
+  box-shadow: 0 4px 20px rgba(0,0,0,0.4);
+  transform: translateY(-2px);
+}
+.wi-header {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 7px;
+  margin-bottom: 11px;
+}
+.wi-opp { font-weight: 700; font-size: 1rem; color: var(--text); letter-spacing: -0.2px; }
+.wi-meta { font-size: 0.72rem; color: var(--muted); width: 100%; margin-top: -3px; }
+.stakes-badge {
+  font-size: 0.62rem;
+  font-weight: 700;
+  padding: 2px 7px;
+  border-radius: 4px;
+  letter-spacing: 0.8px;
+  text-transform: uppercase;
+}
+.gpt-stake {
+  font-style: italic;
+  font-size: 0.86rem;
+  color: #bbb;
+  margin-bottom: 13px;
+  border-left: 2px solid rgba(245,197,24,0.25);
+  padding-left: 10px;
+  line-height: 1.55;
+}
+.wi-outcomes { display: flex; align-items: stretch; gap: 10px; }
+.wi-outcome {
+  flex: 1;
+  text-align: center;
+  padding: 13px 10px;
+  border-radius: var(--radius-sm);
+  transition: transform var(--transition);
+}
+.wi-outcome:hover { transform: scale(1.02); }
+.win-outcome  { background: var(--green-dim); border: 1px solid var(--green-border); }
+.loss-outcome { background: var(--red-dim);   border: 1px solid var(--red-border); }
+.wi-label {
+  font-size: 0.6rem;
+  text-transform: uppercase;
+  letter-spacing: 1.2px;
+  color: var(--muted);
+  font-weight: 600;
+}
+.wi-rank {
+  font-family: 'Bebas Neue', sans-serif;
+  font-size: 2.2rem;
+  line-height: 1;
+  color: var(--gold);
+  margin: 5px 0 3px;
+  letter-spacing: 1px;
+}
+.wi-delta { font-size: 0.78rem; font-weight: 700; }
+.wi-delta.up   { color: var(--green); }
+.wi-delta.down { color: var(--red); }
+.wi-delta.flat { color: var(--muted); }
+.wi-vs {
+  font-family: 'Bebas Neue', sans-serif;
+  font-size: 1rem;
+  color: var(--muted);
+  align-self: center;
+  flex-shrink: 0;
+  letter-spacing: 1px;
+}
+.wi-upset-warn {
+  font-size: 0.68rem;
+  font-weight: 700;
+  color: var(--amber);
+  margin-top: 6px;
+  letter-spacing: 0.3px;
+  background: rgba(245,158,11,0.1);
+  border: 1px solid rgba(245,158,11,0.25);
+  border-radius: 4px;
+  padding: 3px 7px;
+  display: inline-block;
+}
+.wi-upset-tag {
+  font-size: 0.62rem;
+  font-weight: 700;
+  color: var(--amber);
+  border: 1px solid rgba(245,158,11,0.3);
+  background: rgba(245,158,11,0.1);
+  padding: 1px 5px;
+  border-radius: 3px;
+  margin-left: 5px;
+  white-space: nowrap;
+}
+.wi-matrix-wrap {
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--border);
+}
+.wi-matrix-wrap table { min-width: 480px; }
+.wi-matrix-wrap td:first-child {
+  white-space: nowrap;
+  max-width: 160px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* ── Tooltips ──────────────────────────────────────────────────── */
 .tip { position: relative; cursor: help; display: inline; }
 .tip::after {
   content: attr(data-tip);
-  position: absolute; bottom: 125%; left: 50%; transform: translateX(-50%);
-  background: #1e1e1e; color: #e2e2e2; border: 1px solid #3a3a3a;
-  border-radius: 6px; padding: 8px 12px; font-size: 0.78rem; line-height: 1.5;
-  width: 240px; white-space: normal; text-align: left;
-  opacity: 0; pointer-events: none; transition: opacity 0.15s ease;
-  z-index: 999; font-family: 'DM Sans', sans-serif; font-style: normal;
-  font-weight: 400; box-shadow: 0 4px 16px #0008;
+  position: absolute;
+  bottom: calc(100% + 8px);
+  left: 50%;
+  transform: translateX(-50%);
+  background: #1a1a1a;
+  color: #e0e0e0;
+  border: 1px solid #333;
+  border-radius: var(--radius-sm);
+  padding: 9px 13px;
+  font-size: 0.76rem;
+  line-height: 1.55;
+  width: 240px;
+  white-space: normal;
+  text-align: left;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.18s ease, transform 0.18s ease;
+  transform: translateX(-50%) translateY(4px);
+  z-index: 999;
+  font-family: 'DM Sans', sans-serif;
+  font-style: normal;
+  font-weight: 400;
+  box-shadow: 0 8px 32px rgba(0,0,0,0.6);
 }
 .tip::before {
-  content: ''; position: absolute; bottom: 115%; left: 50%; transform: translateX(-50%);
-  border: 5px solid transparent; border-top-color: #3a3a3a;
-  opacity: 0; pointer-events: none; transition: opacity 0.15s ease; z-index: 999;
+  content: '';
+  position: absolute;
+  bottom: calc(100% + 3px);
+  left: 50%;
+  transform: translateX(-50%);
+  border: 5px solid transparent;
+  border-top-color: #333;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.18s ease;
+  z-index: 999;
 }
-.tip:hover::after, .tip:hover::before { opacity: 1; }
-footer { text-align: center; color: var(--muted); font-size: 0.72rem; padding: 20px 36px; border-top: 1px solid var(--border); margin-top: 4px; }
+.tip:hover::after {
+  opacity: 1;
+  transform: translateX(-50%) translateY(0);
+}
+.tip:hover::before { opacity: 1; }
+
+/* ── Footer ────────────────────────────────────────────────────── */
+footer {
+  text-align: center;
+  color: var(--muted);
+  font-size: 0.7rem;
+  padding: 20px 28px;
+  border-top: 1px solid var(--border);
+  margin-top: 8px;
+  letter-spacing: 0.5px;
+}
+
+/* ── Mobile: 900px ─────────────────────────────────────────────── */
+@media (max-width: 900px) {
+  .col-4, .col-6, .col-8 { grid-column: span 12; }
+}
+
+/* ── Mobile: 600px ─────────────────────────────────────────────── */
+@media (max-width: 600px) {
+  header { padding: 14px 16px; gap: 10px; flex-wrap: wrap; position: static; }
+  header h1 { font-size: 1.85rem; }
+  header p  { font-size: 0.62rem; }
+  .header-logo { width: 44px; height: 44px; }
+  .status-badge { font-size: 0.78rem; padding: 5px 11px; }
+  .grid { padding: 10px 12px 24px; gap: 10px; }
+  .card { padding: 14px 13px; }
+  .card h2 { font-size: 0.72rem; margin-bottom: 11px; padding-bottom: 7px; }
+  .metric .val { font-size: 1.75rem; }
+  .narrative p { font-size: 0.9rem; line-height: 1.8; }
+  .wi-card { min-width: 100%; padding: 13px; }
+  .wi-meta { font-size: 0.68rem; }
+  .wi-rank { font-size: 1.9rem; }
+  .wi-matrix-wrap td:first-child { max-width: 110px; font-size: 0.76rem; }
+  .wi-matrix-wrap td, .wi-matrix-wrap th { padding: 6px 5px; font-size: 0.73rem; }
+  footer { padding: 14px 16px; }
+}
 </style>
 </head>
 <body>
 <header>
-  <div style="display:flex;align-items:center;gap:20px;">
-    <img src="RPI_Logo.jpg" alt="USM RPI Logo"
-         style="width:72px;height:72px;border-radius:14px;object-fit:cover;border:2px solid #f5c518;flex-shrink:0;">
+  <div class="header-left">
+    <img src="RPI_Logo.jpg" alt="USM RPI Logo" class="header-logo">
     <div>
       <h1>Southern Miss Baseball</h1>
       <p>RPI Intelligence Dashboard &nbsp;·&nbsp; 2026-03-17</p>
@@ -160,11 +559,11 @@ footer { text-align: center; color: var(--muted); font-size: 0.72rem; padding: 2
 
 <div class="grid">
 
-  <div class="card col-12 narrative"><h2>Daily Brief</h2><p>Southern Miss remains firmly entrenched at the top of the national RPI rankings, holding the No. 1 spot with a slight uptick in RPI value to 0.6909. The team’s overall record stands strong at 16-4, though their conference mark is a modest 1-2. Notably, the recalibration of quadrant records has adjusted their Q2 mark to 3-0 and Q4 to 3-1, reflecting sustained success against quality competition.
+  <div class="card col-12 narrative"><h2>Daily Brief</h2><p>Southern Miss maintains its top spot in the national RPI rankings at No. 1 with a slight increase in RPI value to 0.6909. Despite a recent series at Arkansas State resulting in two losses out of three, the team’s overall record holds steady at 16-4, demonstrating resilience. The squad’s strength of schedule remains elite at No. 2 with a value of 0.6576, driven largely by earlier wins over quality opponents like Ole Miss (RPI 6) and competitive matchups against teams such as Arkansas State (RPI 23).
 
-Their strength of schedule remains elite, ranked No. 2 with a value of 0.6576, but the immediate outlook softens with upcoming opponents averaging an RPI near 87. Southern Miss will face Nicholls (RPI 152) in a neutral site matchup, followed by a home series against Troy (RPI 89), both offering limited opportunities to bolster quadrant one and two records. This softer slate poses the main threat to their dominant RPI positioning, as extended play against lower-ranked teams could stall further gains.
+While the upcoming schedule is comparatively soft, with an average opponent RPI of 87, Southern Miss must remain vigilant. The series ahead includes Nicholls (RPI 152) at a neutral site, followed by a home series against Troy (RPI 89), presenting limited opportunities to boost its RPI further. The team’s lack of current Q1 and Q2 games means maintaining this top spot hinges on capitalizing against these mid-tier opponents and preparing for the tough challenge that awaits at Mississippi State (RPI 17) next week.
 
-Looking ahead, the challenge intensifies on March 24 with a critical road test at No. 6 Mississippi State (RPI 17). This series will be pivotal in maintaining Southern Miss’s top-tier seed trajectory. For now, Southern Miss confidently holds its place atop the RPI leaderboard, with an opportunity to solidify a coveted national seed with consistent performance against upcoming competition.</p></div>
+Southern Miss confidently sits in national seed territory; however, they cannot afford a slip. Sustained focus and execution in upcoming games will solidify their position and protect against the pressure of indirect impacts from rival teams’ performances. The path forward is clear: continue dominating to validate their RPI supremacy and secure a top national seed come tournament time.</p></div>
 
   <div class="card col-4">
     <h2>Key Metrics</h2>
@@ -242,18 +641,18 @@ Looking ahead, the challenge intensifies on March 24 with a critical road test a
                     <span class="q-badge q3">Q3</span>
                     <span class="stakes-badge" style="background:#ffa94022;color:#ffa940;border:1px solid #ffa94044">LOW STAKES</span>
                   </div>
-                  <p class="gpt-stake">Southern Miss risks a damaging Q3 loss on their resume if upset by low-RPI Nicholls despite stable RPI.</p>
+                  <p class="gpt-stake">Southern Miss risks damaging its tournament resume with a loss to low-RPI Nicholls despite minimal RPI impact.</p>
                   <div class="wi-outcomes">
                     <div class="wi-outcome win-outcome">
                       <div class="wi-label"><span class="tip" data-tip="Projected RPI rank if Southern Miss wins this game or sweeps this series.">IF WIN</span></div>
                       <div class="wi-rank">#1</div>
-                      <div class="wi-delta flat">-- 0 spots</div>
+                      <div class="wi-delta up">-- 0 spots</div>
                     </div>
                     <div class="wi-vs">VS</div>
                     <div class="wi-outcome loss-outcome">
                       <div class="wi-label"><span class="tip" data-tip="Projected RPI rank if Southern Miss loses this game or gets swept in this series.">IF LOSS</span></div>
                       <div class="wi-rank">#1</div>
-                      <div class="wi-delta flat">-- 0 spots</div>
+                      <div class="wi-delta down">-- 0 spots</div>
                       <div class="wi-upset-warn">&#9888; Resume damage</div>
                     </div>
                   </div>
@@ -265,12 +664,12 @@ Looking ahead, the challenge intensifies on March 24 with a critical road test a
                     <span class="q-badge q3">Q3</span>
                     <span class="stakes-badge" style="background:#ffa94022;color:#ffa940;border:1px solid #ffa94044">LOW STAKES</span>
                   </div>
-                  <p class="gpt-stake">Southern Miss must sweep Troy to retain RPI #1; any loss drops them to #2.</p>
+                  <p class="gpt-stake">Southern Miss must sweep Troy to secure RPI #1; losing all drops them to RPI #2.</p>
                   <div class="wi-outcomes">
                     <div class="wi-outcome win-outcome">
                       <div class="wi-label"><span class="tip" data-tip="Projected RPI rank if Southern Miss wins this game or sweeps this series.">IF WIN</span></div>
                       <div class="wi-rank">#1</div>
-                      <div class="wi-delta flat">-- 0 spots</div>
+                      <div class="wi-delta up">-- 0 spots</div>
                     </div>
                     <div class="wi-vs">VS</div>
                     <div class="wi-outcome loss-outcome">
@@ -283,7 +682,6 @@ Looking ahead, the challenge intensifies on March 24 with a critical road test a
                 </div></div>
     <div style="margin-top:20px;">
       <div style="font-size:0.72rem;color:#666;text-transform:uppercase;letter-spacing:1px;margin-bottom:8px;">Full Schedule Scenario Matrix</div>
-      <div class="wi-matrix-wrap">
       
             <table>
               <thead>
@@ -294,7 +692,6 @@ Looking ahead, the challenge intensifies on March 24 with a critical road test a
               </thead>
               <tbody><tr><td>Nicholls <small class='conf-tag'>(Southland)</small></td><td>Neutral</td><td>#152</td><td><span class='q-badge q3'>Q3</span></td><td class=''>#1 (+0)</td><td class=''>#1 (-0) <span class='wi-upset-tag'>resume</span></td></tr><tr><td>Troy (3-game series) <small class='conf-tag'>(Sun Belt)</small></td><td>Home</td><td>#89</td><td><span class='q-badge q3'>Q3</span></td><td class=''>#1 (+0)</td><td class='loss'>#2 (-1)</td></tr><tr><td>Mississippi State <small class='conf-tag'>(SEC)</small></td><td>Away</td><td>#17</td><td><span class='q-badge q1'>Q1</span></td><td class=''>#1 (+0)</td><td class='loss'>#2 (-1)</td></tr></tbody>
             </table>
-      </div>
     </div>
     <p style="font-size:0.7rem;color:#555;margin-top:12px;">Projections are directional estimates based on RPI weight modeling. Not a simulation.</p>
   </div>
@@ -305,39 +702,71 @@ Looking ahead, the challenge intensifies on March 24 with a critical road test a
 <footer>Southern Miss RPI Bot &nbsp;·&nbsp; Data: Warren Nolan &nbsp;·&nbsp; Generated 2026-03-17</footer>
 
 <script>
-const ctx = document.getElementById('rankChart').getContext('2d');
-new Chart(ctx, {
-  type: 'line',
-  data: {
-    labels: ["2026-03-12", "2026-03-13", "2026-03-16", "2026-03-17"],
-    datasets: [{
-      label: 'RPI Rank',
-      data: [1, 1, 1, 1],
-      borderColor: '#f5c518',
-      backgroundColor: 'rgba(245,197,24,0.07)',
-      tension: 0.35,
-      pointBackgroundColor: '#f5c518',
-      pointRadius: 4,
-      fill: true,
-    }]
-  },
-  options: {
-    responsive: true,
-    plugins: { legend: { display: false } },
-    scales: {
-      y: {
-        reverse: true,
-        ticks: { color: '#666', stepSize: 1 },
-        grid: { color: '#1e1e1e' },
-        title: { display: true, text: 'Rank (lower = better)', color: '#555', font: { size: 10 } }
+(function() {
+  const ctx = document.getElementById('rankChart').getContext('2d');
+  const grad = ctx.createLinearGradient(0, 0, 0, 200);
+  grad.addColorStop(0,   'rgba(245,197,24,0.22)');
+  grad.addColorStop(0.6, 'rgba(245,197,24,0.05)');
+  grad.addColorStop(1,   'rgba(245,197,24,0)');
+
+  new Chart(ctx, {
+    type: 'line',
+    data: {
+      labels: ["2026-03-12", "2026-03-13", "2026-03-16", "2026-03-17"],
+      datasets: [{
+        label: 'RPI Rank',
+        data: [1, 1, 1, 1],
+        borderColor: '#f5c518',
+        borderWidth: 2,
+        backgroundColor: grad,
+        tension: 0.4,
+        pointBackgroundColor: '#f5c518',
+        pointBorderColor: '#0e0e0e',
+        pointBorderWidth: 2,
+        pointRadius: 4,
+        pointHoverRadius: 6,
+        pointHoverBackgroundColor: '#fff',
+        pointHoverBorderColor: '#f5c518',
+        fill: true,
+      }]
+    },
+    options: {
+      responsive: true,
+      animation: { duration: 900, easing: 'easeOutQuart' },
+      plugins: {
+        legend: { display: false },
+        tooltip: {
+          backgroundColor: '#1a1a1a',
+          borderColor: '#333',
+          borderWidth: 1,
+          titleColor: '#f5c518',
+          bodyColor: '#ccc',
+          padding: 10,
+          cornerRadius: 6,
+          displayColors: false,
+          callbacks: {
+            title: (items) => items[0].label,
+            label: (item) => ' Rank #' + item.raw,
+          }
+        }
       },
-      x: {
-        ticks: { color: '#666', maxTicksLimit: 8 },
-        grid: { color: '#161616' }
+      scales: {
+        y: {
+          reverse: true,
+          ticks: { color: '#555', font: { size: 10, family: 'DM Mono' }, stepSize: 1 },
+          grid: { color: 'rgba(255,255,255,0.04)' },
+          border: { color: '#242424' },
+          title: { display: true, text: 'Rank ↑ better', color: '#444', font: { size: 9 } }
+        },
+        x: {
+          ticks: { color: '#555', maxTicksLimit: 7, font: { size: 10 } },
+          grid: { color: 'rgba(255,255,255,0.02)' },
+          border: { color: '#242424' }
+        }
       }
     }
-  }
-});
+  });
+})();
 </script>
 </body>
 </html>
