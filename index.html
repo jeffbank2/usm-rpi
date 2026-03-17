@@ -103,6 +103,8 @@ tr:last-child td { border-bottom: none; }
 .wi-delta.up   { color: #00c853; }
 .wi-delta.down { color: #ff4d4f; }
 .wi-vs { font-family: 'Bebas Neue', sans-serif; font-size: 1.2rem; color: var(--muted); }
+.wi-upset-warn { font-size: 0.72rem; font-weight: 600; color: #ffa940; margin-top: 4px; letter-spacing: 0.5px; }
+.wi-upset-tag { font-size: 0.65rem; font-weight: 600; color: #ffa940; border: 1px solid #ffa94044; background: #ffa94022; padding: 1px 5px; border-radius: 3px; margin-left: 4px; }
 /* Tooltips */
 .tip { position: relative; cursor: help; display: inline; }
 .tip::after {
@@ -139,11 +141,11 @@ footer { text-align: center; color: var(--muted); font-size: 0.72rem; padding: 2
 
 <div class="grid">
 
-  <div class="card col-12 narrative"><h2>Daily Brief</h2><p>Southern Miss asserts itself as the nation’s top RPI team with a 16-4 overall record, anchored by a sterling 10-3 mark against Q1 opponents. Today’s brief establishes their baseline at number one with an elite RPI of 0.6909 and a rugged strength of schedule ranked second nationally at 0.6576. While the Golden Eagles recently dropped a tight series in conference play at Arkansas State, those losses have not dented their national seed projection thanks to strong wins over high-caliber teams, including a critical 2-1 victory at home against fifth-ranked Ole Miss.
+  <div class="card col-12 narrative"><h2>Daily Brief</h2><p>Southern Miss currently sits firmly atop the national RPI rankings at No. 1 with a robust 16-4 overall record. This establishes them as a clear national seed contender thanks to their elite 0.6909 RPI value and the nation’s second-best strength of schedule at 0.6576. Their recent 3-0 sweep of North Alabama and clutch 2-1 home win over No. 5 Ole Miss boosted their RPI, although a 1-2 conference start and two tough losses at Arkansas State slightly temper momentum.
 
-Despite this prime positioning, Southern Miss faces risk in an upcoming stretch that lacks quality opponents. The next five games average an opponent RPI of 87, diminishing opportunities to bolster their Q1/Q2 resume. Maintaining the top spot will require the Golden Eagles to continue winning decisively, especially as they face multiple home games versus Troy (RPI 88) followed by a challenging road matchup at eighteenth-ranked Mississippi State. Given their balanced 5-2 road record and undefeated neutral site mark (3-0), Southern Miss is well-equipped to navigate these tests.
+While Southern Miss’s strength of schedule is excellent overall, the immediate outlook reveals a soft upcoming slate—with opponents averaging an RPI around 87—limiting further Q1 and Q2 opportunities. This softness could challenge their grip on the top spot unless they capitalize with consistent wins on the road and neutral sites. Next up is a neutral-site game versus low-RPI Nicholls, followed by a home series against Troy, both teams with sub-100 RPIs, offering Southern Miss a chance to maintain their winning ways but limited chances to improve their RPI significantly. A key test looms on March 24 at No. 18 Mississippi State, presenting an opportunity to shore up their Q1 résumé and reinforce their position as the nation’s top seed.
 
-In sum, Southern Miss holds national seed territory with authority. The margin for error tightens in this soft upcoming slate, but confidence remains high that this team can sustain its RPI dominance through smart execution and timely victories.</p></div>
+Southern Miss sits confident in the driver’s seat for a top national seed. Maintaining focus through these upcoming games against softer competition and seizing moments against quality opponents will safeguard this premier status.</p></div>
 
   <div class="card col-4">
     <h2>Key Metrics</h2>
@@ -221,7 +223,7 @@ In sum, Southern Miss holds national seed territory with authority. The margin f
                     <span class="q-badge q3">Q3</span>
                     <span class="stakes-badge" style="background:#ffa94022;color:#ffa940;border:1px solid #ffa94044">LOW STAKES</span>
                   </div>
-                  <p class="gpt-stake">Southern Miss must sweep Nicholls to maintain RPI #1; losing risks dropping despite opponent’s low RPI.</p>
+                  <p class="gpt-stake">Southern Miss risks a damaging resume hit despite little RPI drop if upset by low-ranked Nicholls on neutral court.</p>
                   <div class="wi-outcomes">
                     <div class="wi-outcome win-outcome">
                       <div class="wi-label"><span class="tip" data-tip="Projected RPI rank if Southern Miss wins this game or sweeps this series.">IF WIN</span></div>
@@ -233,6 +235,7 @@ In sum, Southern Miss holds national seed territory with authority. The margin f
                       <div class="wi-label"><span class="tip" data-tip="Projected RPI rank if Southern Miss loses this game or gets swept in this series.">IF LOSS</span></div>
                       <div class="wi-rank">#1</div>
                       <div class="wi-delta down">-- 0 spots</div>
+                      <div class="wi-upset-warn">&#9888; Resume damage</div>
                     </div>
                   </div>
                 </div>
@@ -243,7 +246,7 @@ In sum, Southern Miss holds national seed territory with authority. The margin f
                     <span class="q-badge q3">Q3</span>
                     <span class="stakes-badge" style="background:#ffa94022;color:#ffa940;border:1px solid #ffa94044">LOW STAKES</span>
                   </div>
-                  <p class="gpt-stake">Southern Miss must sweep Troy to secure RPI #1; getting swept drops them to #2.</p>
+                  <p class="gpt-stake">Southern Miss must sweep Troy to retain RPI #1; any loss drops them to RPI #2.</p>
                   <div class="wi-outcomes">
                     <div class="wi-outcome win-outcome">
                       <div class="wi-label"><span class="tip" data-tip="Projected RPI rank if Southern Miss wins this game or sweeps this series.">IF WIN</span></div>
@@ -255,6 +258,7 @@ In sum, Southern Miss holds national seed territory with authority. The margin f
                       <div class="wi-label"><span class="tip" data-tip="Projected RPI rank if Southern Miss loses this game or gets swept in this series.">IF LOSS</span></div>
                       <div class="wi-rank">#2</div>
                       <div class="wi-delta down">▼ 1 spot</div>
+                      
                     </div>
                   </div>
                 </div></div>
@@ -268,7 +272,7 @@ In sum, Southern Miss holds national seed territory with authority. The margin f
                   <th style="color:#00c853">If Win</th><th style="color:#ff4d4f">If Loss</th>
                 </tr>
               </thead>
-              <tbody><tr><td>Nicholls <small class='conf-tag'>(Southland)</small></td><td>Neutral</td><td>#152</td><td><span class='q-badge q3'>Q3</span></td><td class=''>#1 (+0)</td><td class=''>#1 (-0)</td></tr><tr><td>Troy (3-game series) <small class='conf-tag'>(Sun Belt)</small></td><td>Home</td><td>#88</td><td><span class='q-badge q3'>Q3</span></td><td class=''>#1 (+0)</td><td class='loss'>#2 (-1)</td></tr><tr><td>Mississippi State <small class='conf-tag'>(SEC)</small></td><td>Away</td><td>#18</td><td><span class='q-badge q1'>Q1</span></td><td class=''>#1 (+0)</td><td class='loss'>#2 (-1)</td></tr></tbody>
+              <tbody><tr><td>Nicholls <small class='conf-tag'>(Southland)</small></td><td>Neutral</td><td>#152</td><td><span class='q-badge q3'>Q3</span></td><td class=''>#1 (+0)</td><td class=''>#1 (-0) <span class='wi-upset-tag'>resume</span></td></tr><tr><td>Troy (3-game series) <small class='conf-tag'>(Sun Belt)</small></td><td>Home</td><td>#88</td><td><span class='q-badge q3'>Q3</span></td><td class=''>#1 (+0)</td><td class='loss'>#2 (-1)</td></tr><tr><td>Mississippi State <small class='conf-tag'>(SEC)</small></td><td>Away</td><td>#18</td><td><span class='q-badge q1'>Q1</span></td><td class=''>#1 (+0)</td><td class='loss'>#2 (-1)</td></tr></tbody>
             </table>
     </div>
     <p style="font-size:0.7rem;color:#555;margin-top:12px;">Projections are directional estimates based on RPI weight modeling. Not a simulation.</p>
