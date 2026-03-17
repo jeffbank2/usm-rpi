@@ -1,0 +1,81 @@
+name: Daily RPI Update
+
+on:
+  schedule:
+    - cron: '0 11 * * *'  # 5:00 AM Central (UTC-6)
+  workflow_dispatch:       # allows manual trigger anytime
+
+jobs:
+  run-rpi-bot:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@v4
+        with:
+          token: ${{ secrets.GH_PAT }}
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Install dependencies
+        run: pip install -r requirements.txt
+
+      - name: Run RPI bot
+        env:
+          OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+        run: |
+          python southern_miss_rpi_bot.py --llm --no-open
+
+      - name: Commit and push updated dashboard
+        run: |
+          git config user.name "RPI Bot"
+          git config user.email "bankston.jeff@gmail.com"
+          git add daily_dashboard.html southern_miss_rpi.db daily_brief.txt bot_log.txt
+          git diff --staged --quiet || git commit -m "Daily RPI update $(date +'%Y-%m-%d')"
+          git push
+
+      - name: Send daily email
+        env:
+          GMAIL_ADDRESS: ${{ secrets.GMAIL_ADDRESS }}
+          GMAIL_APP_PASSWORD: ${{ secrets.GMAIL_APP_PASSWORD }}
+        run: |
+          python - <<'EOF'
+          import smtplib
+          import os
+          from email.mime.multipart import MIMEMultipart
+          from email.mime.text import MIMEText
+
+          gmail_user = os.environ["GMAIL_ADDRESS"]
+          gmail_pass = os.environ["GMAIL_APP_PASSWORD"]
+
+          # Read the daily brief
+          try:
+              with open("daily_brief.txt", "r") as f:
+                  brief = f.read()
+          except:
+              brief = "Daily RPI update complete. Check the dashboard."
+
+          msg = MIMEMultipart("alternative")
+          msg["Subject"] = f"Southern Miss RPI Update"
+          msg["From"] = gmail_user
+          msg["To"] = "bankston.jeff@gmail.com"
+
+          body = f"""Southern Miss RPI Daily Update
+
+{brief}
+
+View full dashboard: https://jeffbank2.github.io/usm-rpi/
+
+--
+Southern Miss RPI Bot
+"""
+          msg.attach(MIMEText(body, "plain"))
+
+          with smtplib.SMTP_SSL("smtp.gmail.com", 465) as server:
+              server.login(gmail_user, gmail_pass)
+              server.sendmail(gmail_user, "bankston.jeff@gmail.com", msg.as_string())
+              print("Email sent successfully")
+          EOF
