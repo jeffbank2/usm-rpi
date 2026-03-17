@@ -3,32 +3,27 @@ Collecting rival snapshots (6 teams)...
 Generating GPT narrative...
 
 --- GPT Narrative ---
-Southern Miss maintains its hold on the No. 1 RPI ranking with a 16-4 overall record, despite a slight dip in RPI value from 0.7275 to 0.6909. The team’s strength of schedule remains formidable at second nationally, though the SOS value has edged down marginally, reflecting an upcoming slate that lacks significant Quadrant 1 or 2 opportunities. Recent results include a tight 2-5 loss at Arkansas State — a solid Q1 opponent ranked 22nd in RPI — which slightly impacted their impressive Q1 record now standing at 10-3. The Golden Eagles remain undefeated in Quadrant 2 at 3-0 and hold a strong 3-1 record in Quadrant 4. 
+Southern Miss asserts itself as the nation’s top RPI team with a 16-4 overall record, anchored by a sterling 10-3 mark against Q1 opponents. Today’s brief establishes their baseline at number one with an elite RPI of 0.6909 and a rugged strength of schedule ranked second nationally at 0.6576. While the Golden Eagles recently dropped a tight series in conference play at Arkansas State, those losses have not dented their national seed projection thanks to strong wins over high-caliber teams, including a critical 2-1 victory at home against fifth-ranked Ole Miss.
 
-Southern Miss’s early season success, including key home wins over top-5 Ole Miss and a sweep of North Alabama, has fortified their top national seed positioning. However, the recent 1-loss skid serves as a reminder that maintaining momentum against quality opponents is crucial.
+Despite this prime positioning, Southern Miss faces risk in an upcoming stretch that lacks quality opponents. The next five games average an opponent RPI of 87, diminishing opportunities to bolster their Q1/Q2 resume. Maintaining the top spot will require the Golden Eagles to continue winning decisively, especially as they face multiple home games versus Troy (RPI 88) followed by a challenging road matchup at eighteenth-ranked Mississippi State. Given their balanced 5-2 road record and undefeated neutral site mark (3-0), Southern Miss is well-equipped to navigate these tests.
 
-Looking ahead, Southern Miss faces a soft upcoming schedule with an average opponent RPI of 87. Key matchups include neutral-site action against Nicholls (RPI 152) and a home series versus Troy (RPI 88), both Quadrant 3 tests offering limited chances to boost their already strong resume. The stretch concludes with a challenging away game at No. 18 Mississippi State on March 24, an important opportunity to reaffirm their top seed status against a high-caliber SEC adversary. Southern Miss remains firmly in control of its national seed destiny but must capitalize on these upcoming challenges to sustain their elite standing.
+In sum, Southern Miss holds national seed territory with authority. The margin for error tightens in this soft upcoming slate, but confidence remains high that this team can sustain its RPI dominance through smart execution and timely victories.
 ---------------------
 
 Southern Miss RPI Daily Brief | 2026-03-16
 
-RPI Rank:  1 -> 1
-RPI Value: 0.7275 -> 0.6909
-SOS Rank:  2 -> 2
-Record:    15-2 -> 16-4
+RPI Rank:  1
+RPI Value: 0.6909
+SOS Rank:  2
+Record:    16-4
 
 Host Outlook: National seed territory
 
 Trend Summary:
-- Flat in rank, record changed +1W / +2L.
+- No trend available yet.
 
 Why it moved:
-- RPI rank did not change from the prior snapshot.
-- Loss against Arkansas State (away, RPI 22, Sun Belt, Q1).
-- Q1 record changed from 9-1 to 10-3.
-- Q2 record changed from 9-1 to 3-0.
-- Q3 record changed from 9-1 to 0-0.
-- Q4 record changed from 9-1 to 3-1.
+- No prior snapshot exists yet. Today's run establishes the baseline.
 
 SOS Trajectory: Upcoming schedule is soft -- avg opponent RPI 87. Limited Q1/Q2 opportunities.
 
@@ -39,9 +34,6 @@ RPI Radar:
 - #4 Texas (SEC)
 
 Impact Games / Watchlist:
-- Impact page includes direct games against Southern Miss and indirect games involving prior opponents.
-- Upcoming: Nicholls (neutral, RPI 152, Southland, Q3).
-- Upcoming: Troy (home, RPI 88, Sun Belt, Q3).
 
 Rival Watch:
 - Ole Miss (SEC): RPI #5, 16-5
