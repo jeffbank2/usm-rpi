@@ -104,7 +104,7 @@ tr:last-child td { border-bottom: none; }
 .wi-delta.down { color: #ff4d4f; }
 .wi-vs { font-family: 'Bebas Neue', sans-serif; font-size: 1.2rem; color: var(--muted); }
 /* Tooltips */
-.tip { position: relative; cursor: help; border-bottom: 1px dashed #555; display: inline; }
+.tip { position: relative; cursor: help; display: inline; }
 .tip::after {
   content: attr(data-tip);
   position: absolute; bottom: 125%; left: 50%; transform: translateX(-50%);
@@ -126,20 +126,24 @@ footer { text-align: center; color: var(--muted); font-size: 0.72rem; padding: 2
 </head>
 <body>
 <header>
-  <div>
-    <h1>Southern Miss Baseball</h1>
-    <p>RPI Intelligence Dashboard &nbsp;·&nbsp; 2026-03-16</p>
+  <div style="display:flex;align-items:center;gap:20px;">
+    <img src="RPI_Logo.jpg" alt="USM RPI Logo"
+         style="width:72px;height:72px;border-radius:14px;object-fit:cover;border:2px solid #f5c518;flex-shrink:0;">
+    <div>
+      <h1>Southern Miss Baseball</h1>
+      <p>RPI Intelligence Dashboard &nbsp;·&nbsp; 2026-03-16</p>
+    </div>
   </div>
   <div class="status-badge">STAR &nbsp; National Seed Territory</div>
 </header>
 
 <div class="grid">
 
-  <div class="card col-12 narrative"><h2>Daily Brief</h2><p>Southern Miss holds firm at the top of the RPI rankings, maintaining their No. 1 position with a 16-4 overall record following last weekend’s tough series at Arkansas State. The team went 1-2 on the road against the Sun Belt contender (RPI 22), which lowered their RPI value from 0.7275 to 0.6909 but did not affect their top rank. Their strength of schedule remains strong at No. 2, though the SOS value dipped slightly to 0.6576. Southern Miss extended their impressive Q1 record to 10-3 thanks to quality wins over Ole Miss (RPI 5) and continued dominance in Q2 (3-0), but recent losses mark a stark reminder: maintaining national seed status hinges on sustaining success against higher-level competition.
+  <div class="card col-12 narrative"><h2>Daily Brief</h2><p>Southern Miss remains firmly entrenched at the top of the national RPI rankings at No. 1 with a 16-4 overall record. While the team’s RPI value dipped slightly from 0.7275 to 0.6909 following a tough three-game series at Arkansas State, where the Golden Eagles went 1-2 against an RPI 22 opponent, the strength of schedule holds steady at No. 2 with a value of 0.6576. Southern Miss’s impressive resume features a strong 10-3 record against Q1 teams and undefeated 3-0 mark in Q2, underscoring consistent performance against quality competition.
 
-The upcoming stretch features a softer slate overall, with average opponent RPI around 87, limiting chances for big RPI boosts. Southern Miss faces Nicholls (RPI 152) at a neutral site before hosting Troy (RPI 88) in a crucial three-game series at Pete Taylor Park. While these games won’t heavily influence RPI upward momentum, they provide an opportunity to build confidence and set the tone before a challenging road trip to Mississippi State (RPI 18) on March 24.
+The slip in momentum—currently on a one-game losing streak—should not raise alarms, as recent losses came on the road at a high-level Sun Belt program. The upcoming slate, however, offers a softer schedule, with average opponent RPI around 87 and mostly Q3 contests ahead, including a neutral site matchup against Nicholls (RPI 152) and a home series versus Troy (RPI 88). This stretch provides an opportunity for Southern Miss to regroup but will offer limited chances to bolster their RPI or strength of schedule before returning to more challenging opponents.
 
-Southern Miss remains in elite national seed territory with a robust resume, but continued success against top-tier foes must anchor their path forward to secure postseason positioning.</p></div>
+Maintaining national seed territory is well within reach, but vigilance remains critical on this softer upcoming schedule to avoid stagnation in metrics crucial for NCAA Tournament positioning. Confident and balanced, Southern Miss stands poised to sustain their elite standing as the season progresses.</p></div>
 
   <div class="card col-4">
     <h2>Key Metrics</h2>
@@ -152,13 +156,13 @@ Southern Miss remains in elite national seed territory with a robust resume, but
   </div>
 
   <div class="card col-4">
-    <h2>Quadrant Records <span class="tip" data-tip="Games are graded Q1 through Q4 based on opponent RPI and game location. Q1 is the toughest (best wins), Q4 is easiest. The NCAA selection committee weighs Q1 wins heavily when seeding the tournament.">?</span></h2>
+    <h2>Quadrant Records <span class="tip" data-tip="Games are graded Q1 through Q4 based on opponent RPI and game location. Q1 is the toughest (best wins), Q4 is easiest. The NCAA selection committee weighs Q1 wins heavily when seeding the tournament.">&#x24D8;</span></h2>
     <div class="q-row"><div class="q-card"><div class="q-label"><span class="tip" data-tip="Toughest games. Home vs RPI 1-25, Neutral 1-40, Away 1-60. These wins matter most to the NCAA selection committee.">Q1</span></div><div class="q-val">10-3</div></div><div class="q-card"><div class="q-label"><span class="tip" data-tip="Solid games. Home vs RPI 26-50, Neutral 41-80, Away 61-120. Good wins, manageable losses.">Q2</span></div><div class="q-val">3-0</div></div><div class="q-card"><div class="q-label"><span class="tip" data-tip="Below-average games. Home vs RPI 51-100, Neutral 81-160, Away 121-240. Wins expected, losses hurt.">Q3</span></div><div class="q-val">0-0</div></div><div class="q-card"><div class="q-label"><span class="tip" data-tip="Weakest games. Home vs RPI 101+. Wins count little — losses here are most damaging.">Q4</span></div><div class="q-val">3-1</div></div></div>
     <div class="sos-note">Upcoming schedule is soft -- avg opponent RPI 87. Limited Q1/Q2 opportunities.</div>
   </div>
 
   <div class="card col-4">
-    <h2>Rank Trend (45 days) <span class="tip" data-tip="Daily RPI rank over the past 45 days. The Y-axis is inverted — lower on the chart means a better rank. Each dot is one day the bot ran.">?</span></h2>
+    <h2>Rank Trend (45 days) <span class="tip" data-tip="Daily RPI rank over the past 45 days. The Y-axis is inverted — lower on the chart means a better rank. Each dot is one day the bot ran.">&#x24D8;</span></h2>
     <canvas id="rankChart"></canvas>
   </div>
 
@@ -168,7 +172,7 @@ Southern Miss remains in elite national seed territory with a robust resume, but
   </div>
 
   <div class="card col-4">
-    <h2>RPI Radar <span class="tip" data-tip="The teams ranked immediately above and below Southern Miss in live RPI. The YOU ARE HERE marker shows USM's current position.">?</span></h2>
+    <h2>RPI Radar <span class="tip" data-tip="The teams ranked immediately above and below Southern Miss in live RPI. The YOU ARE HERE marker shows USM's current position.">&#x24D8;</span></h2>
     <ul class="radar-list"><li class="usm">#1 Southern Miss (Sun Belt) <span class="usm-tag">YOU ARE HERE</span></li><li class="">#2 Florida State (ACC)</li><li class="">#3 Auburn (SEC)</li><li class="">#4 Texas (SEC)</li><li class="">#5 Ole Miss (SEC)</li></ul>
   </div>
 
@@ -208,7 +212,7 @@ Southern Miss remains in elite national seed territory with a robust resume, but
 
   
   <div class="card col-12" style="border-color:#2a2a00;">
-    <h2 style="color:#f5c518;">What-If Scenarios <span class="tip" data-tip="Directional projections of how Southern Miss RPI rank could move based on winning or losing each upcoming game or series. Not a simulation — shows relative stakes.">?</span></h2>
+    <h2 style="color:#f5c518;">What-If Scenarios <span class="tip" data-tip="Directional projections of how Southern Miss RPI rank could move based on winning or losing each upcoming game or series. Not a simulation — shows relative stakes.">&#x24D8;</span></h2>
     <div class="wi-cards-row">
                 <div class="wi-card">
                   <div class="wi-header">
@@ -217,7 +221,7 @@ Southern Miss remains in elite national seed territory with a robust resume, but
                     <span class="q-badge q3">Q3</span>
                     <span class="stakes-badge" style="background:#ffa94022;color:#ffa940;border:1px solid #ffa94044">LOW STAKES</span>
                   </div>
-                  <p class="gpt-stake">Southern Miss must avoid a sweep versus Nicholls to maintain their RPI #1 positioning.</p>
+                  <p class="gpt-stake">Southern Miss must avoid losing to Nicholls to maintain their top RPI ranking and secure the sweep bonus.</p>
                   <div class="wi-outcomes">
                     <div class="wi-outcome win-outcome">
                       <div class="wi-label"><span class="tip" data-tip="Projected RPI rank if Southern Miss wins this game or sweeps this series.">IF WIN</span></div>
@@ -239,7 +243,7 @@ Southern Miss remains in elite national seed territory with a robust resume, but
                     <span class="q-badge q3">Q3</span>
                     <span class="stakes-badge" style="background:#ffa94022;color:#ffa940;border:1px solid #ffa94044">LOW STAKES</span>
                   </div>
-                  <p class="gpt-stake">Southern Miss must sweep Troy to retain RPI #1; a sweep loss drops them to #2.</p>
+                  <p class="gpt-stake">Southern Miss must sweep Troy to keep RPI #1; any loss drops them to #2 in Q3 matchups.</p>
                   <div class="wi-outcomes">
                     <div class="wi-outcome win-outcome">
                       <div class="wi-label"><span class="tip" data-tip="Projected RPI rank if Southern Miss wins this game or sweeps this series.">IF WIN</span></div>
