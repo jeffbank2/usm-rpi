@@ -1006,13 +1006,13 @@ class SouthernMissRPIBot:
             if use_llm and client and opp != "upcoming opponent":
                 try:
                     series_str = f"{game_count}-game series" if game_count > 1 else "game"
-                    upset_note = " This is a potential upset trap — a loss here won't move the RPI number much but will damage the tournament resume." if (loss_delta == 0 and bucket in ("Q3","Q4") and (current_rank or 99) <= 25) else ""
+                    upset_note = " IMPORTANT: This is an upset trap — a loss here won't move the RPI number but leaves a damaging Q3/Q4 loss on the tournament resume. Your sentence MUST reference the resume risk, not the RPI movement." if (loss_delta == 0 and bucket in ("Q3","Q4") and (current_rank or 99) <= 25) else ""
                     gpt_prompt = (
                         f"Southern Miss is currently RPI #{current_rank} ({current_rpi:.4f}). "
                         f"They face {opp} in a {series_str} ({loc.lower()}, opponent RPI #{opp_rpi or 'unknown'}, {conf or 'unknown conf'}, {bucket}). "
-                        f"Sweeping projects to #{win_rank_proj}, getting swept projects to #{loss_rank_proj}.{upset_note} "
-                        f"Write ONE punchy sentence (max 20 words) describing the stakes for Southern Miss RPI positioning. "
-                        f"Be direct and specific. No filler phrases."
+                        f"Winning projects to #{win_rank_proj}, losing projects to #{loss_rank_proj}.{upset_note} "
+                        f"Write ONE punchy sentence (max 20 words) describing what's at stake for Southern Miss. "
+                        f"Be direct and specific. No filler phrases like 'crucial' or 'important'."
                     )
                     resp = client.chat.completions.create(
                         model=model,
@@ -1248,8 +1248,8 @@ class SouthernMissRPIBot:
                 opp       = sc.get("label") or sc["opponent"]
                 conf_str2 = sc["conf"]
                 conf_tag  = f' <small class="conf-tag">({conf_str2})</small>' if conf_str2 else ""
-                win_dir  = "up" if sc["win_delta"] >= 0 else "down"
-                loss_dir = "down" if sc["loss_delta"] >= 0 else "up"
+                win_dir  = "up" if sc["win_delta"] > 0 else ("down" if sc["win_delta"] < 0 else "flat")
+                loss_dir = "down" if sc["loss_delta"] > 0 else ("up" if sc["loss_delta"] < 0 else "flat")
                 win_arrow  = "▲" if sc["win_delta"] > 0 else ("▼" if sc["win_delta"] < 0 else "--")
                 loss_arrow = "▼" if sc["loss_delta"] > 0 else ("▲" if sc["loss_delta"] < 0 else "--")
                 gpt_txt  = sc["gpt_stake"]
@@ -1317,7 +1317,9 @@ class SouthernMissRPIBot:
     <div class="wi-cards-row">{whatif_cards_html}</div>
     <div style="margin-top:20px;">
       <div style="font-size:0.72rem;color:#666;text-transform:uppercase;letter-spacing:1px;margin-bottom:8px;">Full Schedule Scenario Matrix</div>
-      <div class="table-wrap">{whatif_matrix_html}</div>
+      <div class="wi-matrix-wrap">
+      {whatif_matrix_html}
+      </div>
     </div>
     <p style="font-size:0.7rem;color:#555;margin-top:12px;">Projections are directional estimates based on RPI weight modeling. Not a simulation.</p>
   </div>
@@ -1367,38 +1369,16 @@ header p  {{ color: var(--muted); font-size: 0.72rem; letter-spacing: 3px; text-
 .col-6  {{ grid-column: span 6; }}
 .col-8  {{ grid-column: span 8; }}
 .col-12 {{ grid-column: span 12; }}
-@media (max-width: 900px) {{
-  .col-4,.col-6,.col-8 {{ grid-column: span 12; }}
-  header {{ padding: 16px; flex-direction: column; align-items: flex-start; gap: 12px; }}
-  header h1 {{ font-size: 2rem; }}
-  .grid {{ padding: 12px; gap: 10px; }}
-  .metric .val {{ font-size: 1.8rem; }}
-  .wi-cards-row {{ flex-direction: column; }}
-  .wi-card {{ min-width: unset; }}
-  .wi-outcomes {{ flex-direction: column; gap: 8px; }}
-  .wi-vs {{ display: none; }}
-  .table-wrap {{ overflow-x: auto; -webkit-overflow-scrolling: touch; }}
-  .q-row {{ gap: 6px; }}
-  .q-card {{ min-width: 45px; padding: 8px 4px; }}
-  .q-val {{ font-size: 1.1rem; }}
-  .narrative p {{ font-size: 0.95rem; }}
-  .tip::after {{ width: 180px; font-size: 0.72rem; }}
-  .status-badge {{ font-size: 0.85rem; padding: 5px 10px; }}
-  footer {{ padding: 16px; font-size: 0.7rem; }}
-}}
-@media (max-width: 480px) {{
-  header h1 {{ font-size: 1.6rem; }}
-  header img {{ width: 52px; height: 52px; }}
-  .metric .val {{ font-size: 1.5rem; }}
-  .card {{ padding: 14px; }}
-  .card h2 {{ font-size: 0.8rem; }}
-  .wi-rank {{ font-size: 1.6rem; }}
-  .q-val {{ font-size: 1rem; }}
-  .metric-grid {{ gap: 6px; }}
-  .metric {{ padding: 10px; }}
-  .week-box {{ font-size: 0.72rem; }}
+@media (max-width: 900px) {{ .col-4,.col-6,.col-8 {{ grid-column: span 12; }} }}
+@media (max-width: 600px) {{
+  .grid {{ padding: 10px 12px; gap: 10px; }}
+  header {{ padding: 14px 16px 12px; flex-wrap: wrap; gap: 8px; }}
+  header h1 {{ font-size: 1.9rem; }}
+  .status-badge {{ font-size: 0.8rem; padding: 4px 10px; }}
+  footer {{ padding: 14px 16px; }}
 }}
 .card {{ background: var(--card); border: 1px solid var(--border); border-radius: 8px; padding: 18px 22px; }}
+@media (max-width: 600px) {{ .card {{ padding: 14px 14px; }} }}
 .card h2 {{
   font-family: 'Bebas Neue', sans-serif; font-size: 0.9rem;
   letter-spacing: 2px; color: var(--gold); text-transform: uppercase;
@@ -1443,13 +1423,16 @@ tr:last-child td {{ border-bottom: none; }}
 .conf-tag {{ color: var(--muted); font-size: 0.75em; }}
 .wi-cards-row {{ display: flex; gap: 16px; flex-wrap: wrap; }}
 .wi-card {{ flex: 1; min-width: 280px; background: var(--dark); border-radius: 8px; padding: 16px; border: 1px solid #2a2a00; }}
+@media (max-width: 600px) {{ .wi-card {{ min-width: 100%; padding: 12px; }} }}
 .wi-header {{ display: flex; flex-wrap: wrap; align-items: center; gap: 8px; margin-bottom: 10px; }}
 .wi-opp {{ font-weight: 600; font-size: 1rem; color: var(--text); }}
-.wi-meta {{ font-size: 0.75rem; color: var(--muted); }}
+.wi-meta {{ font-size: 0.75rem; color: var(--muted); width: 100%; }}
+@media (max-width: 600px) {{ .wi-meta {{ font-size: 0.7rem; }} }}
 .stakes-badge {{ font-size: 0.65rem; font-weight: 700; padding: 2px 7px; border-radius: 3px; letter-spacing: 0.5px; }}
 .gpt-stake {{ font-style: italic; font-size: 0.88rem; color: #bbb; margin-bottom: 12px; border-left: 2px solid #3a2e00; padding-left: 10px; }}
 .wi-outcomes {{ display: flex; align-items: center; gap: 12px; }}
 .wi-outcome {{ flex: 1; text-align: center; padding: 12px; border-radius: 6px; }}
+@media (max-width: 400px) {{ .wi-outcome {{ padding: 8px 6px; }} }}
 .win-outcome  {{ background: #00c85312; border: 1px solid #00c85333; }}
 .loss-outcome {{ background: #ff4d4f12; border: 1px solid #ff4d4f33; }}
 .wi-label {{ font-size: 0.65rem; text-transform: uppercase; letter-spacing: 1px; color: var(--muted); }}
@@ -1457,9 +1440,17 @@ tr:last-child td {{ border-bottom: none; }}
 .wi-delta {{ font-size: 0.8rem; font-weight: 700; }}
 .wi-delta.up   {{ color: #00c853; }}
 .wi-delta.down {{ color: #ff4d4f; }}
-.wi-vs {{ font-family: 'Bebas Neue', sans-serif; font-size: 1.2rem; color: var(--muted); }}
-.wi-upset-warn {{ font-size: 0.72rem; font-weight: 600; color: #ffa940; margin-top: 4px; letter-spacing: 0.5px; }}
-.wi-upset-tag {{ font-size: 0.65rem; font-weight: 600; color: #ffa940; border: 1px solid #ffa94044; background: #ffa94022; padding: 1px 5px; border-radius: 3px; margin-left: 4px; }}
+.wi-delta.flat {{ color: var(--muted); }}
+.wi-vs {{ font-family: 'Bebas Neue', sans-serif; font-size: 1.2rem; color: var(--muted); flex-shrink: 0; }}
+.wi-upset-warn {{ font-size: 0.72rem; font-weight: 600; color: #ffa940; margin-top: 6px; letter-spacing: 0.5px; background: #ffa94015; border: 1px solid #ffa94033; border-radius: 4px; padding: 3px 7px; display: inline-block; }}
+.wi-upset-tag {{ font-size: 0.65rem; font-weight: 600; color: #ffa940; border: 1px solid #ffa94044; background: #ffa94022; padding: 1px 5px; border-radius: 3px; margin-left: 4px; white-space: nowrap; }}
+.wi-matrix-wrap {{ overflow-x: auto; -webkit-overflow-scrolling: touch; margin: 0 -14px; padding: 0 14px; }}
+.wi-matrix-wrap table {{ min-width: 480px; }}
+.wi-matrix-wrap td:first-child {{ white-space: nowrap; max-width: 160px; overflow: hidden; text-overflow: ellipsis; }}
+@media (max-width: 600px) {{
+  .wi-matrix-wrap td:first-child {{ max-width: 110px; font-size: 0.78rem; }}
+  .wi-matrix-wrap td, .wi-matrix-wrap th {{ padding: 6px 6px; font-size: 0.75rem; }}
+}}
 /* Tooltips */
 .tip {{ position: relative; cursor: help; display: inline; }}
 .tip::after {{
@@ -1531,26 +1522,26 @@ footer {{ text-align: center; color: var(--muted); font-size: 0.72rem; padding: 
 
   <div class="card col-4">
     <h2>Rival Watch</h2>
-    <div class="table-wrap"><table>
+    <table>
       <thead><tr><th>Team</th><th>Conf</th><th>RPI</th><th>Record</th></tr></thead>
       <tbody>{rivals_rows or "<tr><td colspan='4'>No rival data.</td></tr>"}</tbody>
-    </table></div>
+    </table>
   </div>
 
   <div class="card col-6">
     <h2>Upcoming Games</h2>
-    <div class="table-wrap"><table>
+    <table>
       <thead><tr><th>Opponent</th><th>Site</th><th>Opp RPI</th><th>Quadrant</th><th>Time</th></tr></thead>
       <tbody>{upcoming_rows or "<tr><td colspan='5'>No upcoming games found.</td></tr>"}</tbody>
-    </table></div>
+    </table>
   </div>
 
   <div class="card col-6">
     <h2>Recent Results</h2>
-    <div class="table-wrap"><table>
+    <table>
       <thead><tr><th>Opponent</th><th>Result</th><th>Site</th><th>Opp RPI</th></tr></thead>
       <tbody>{recent_rows or "<tr><td colspan='4'>No recent games found.</td></tr>"}</tbody>
-    </table></div>
+    </table>
   </div>
 
   <div class="card col-6">
