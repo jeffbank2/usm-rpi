@@ -2,7 +2,7 @@ name: Daily RPI Update
 
 on:
   schedule:
-    - cron: '0 11 * * *'  # 5:00 AM Central (UTC-6)
+    - cron: '0 11 * * *'  # 7:00 AM Central (UTC-6)
   workflow_dispatch:
 
 jobs:
@@ -26,14 +26,15 @@ jobs:
       - name: Run RPI bot
         env:
           OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
-        run: python southern_miss_rpi_bot.py --llm --no-open
+        run: python southern_miss_rpi_bot.py --llm --no-open --html index.html
 
       - name: Commit and push updated dashboard
         run: |
           git config user.name "RPI Bot"
           git config user.email "bankston.jeff@gmail.com"
-          git add daily_dashboard.html southern_miss_rpi.db daily_brief.txt bot_log.txt
+          git add index.html southern_miss_rpi.db daily_brief.txt bot_log.txt
           git diff --staged --quiet || git commit -m "Daily RPI update $(date +'%Y-%m-%d')"
+          git pull --rebase origin main
           git push
 
       - name: Send daily email
