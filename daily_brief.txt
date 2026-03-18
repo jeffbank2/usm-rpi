@@ -3,9 +3,9 @@ Collecting rival snapshots (6 teams)...
 Generating GPT narrative...
 
 --- GPT Narrative ---
-Southern Miss remains firmly entrenched as the No. 1 RPI team with a 17-4 overall record after a strong 4-0 neutral site win over Nicholls. Though the RPI value dipped slightly from 0.6909 to 0.6851, the top ranking holds due to consistent quality wins, including a key series win against Ole Miss. The Q3 record improved from 0-0 to 1-0 with this recent victory.
+Southern Miss maintains its No. 1 RPI rank with a 17-4 record, improving with a win over Nicholls (RPI 142) at a neutral site. The Q3 record now stands at 1-0, slightly lowering their RPI value but keeping them atop the rankings. The recent performance confirms their national seed status despite a tough 1-2 conference record.
 
-The team's SOS remains elite at No. 2 but faces a soft upcoming stretch with an average opponent RPI of 86, limiting Q1 and Q2 opportunities. The three-game home series against Troy (RPI 71) will be crucial to maintain seeding strength before traveling to face a tough Mississippi State squad.
+The strength of schedule remains elite at No. 2 but is trending softer due to upcoming matchups averaging an RPI of 86, offering limited high-quality opportunities. Attention turns to the home series against Troy (RPI 71) starting March 20, crucial for sustaining RPI dominance.
 ---------------------
 
 Southern Miss RPI Daily Brief | 2026-03-18
