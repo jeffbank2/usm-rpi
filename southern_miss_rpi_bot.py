@@ -877,7 +877,10 @@ class SouthernMissRPIBot:
             Tone directive: {tone}
             Use ONLY the facts in the JSON below. Do not invent data.
             Include: rank movement, record change, why it moved, SOS trajectory, upcoming series preview.
-            Keep it under 220 words. Write in clean prose paragraphs, no bullet points.
+            Write exactly 2 short paragraphs, 100 words total maximum.
+            Paragraph 1: rank movement, record change, and why it moved.
+            Paragraph 2: SOS trajectory and one upcoming series to watch.
+            No bullet points. No filler phrases. Every word must earn its place.
 
             JSON:
             {json.dumps(evidence, ensure_ascii=False, indent=2)}
@@ -888,7 +891,7 @@ class SouthernMissRPIBot:
             response = client.chat.completions.create(
                 model=model,
                 messages=[{"role": "user", "content": prompt}],
-                max_tokens=400,
+                max_tokens=180,
             )
             return response.choices[0].message.content.strip()
         except Exception as exc:
@@ -1352,11 +1355,22 @@ class SouthernMissRPIBot:
         _home_rec  = current.get('home_record')   or '--'
         _road_rec  = current.get('road_record')   or '--'
         _neut_rec  = current.get('neutral_record') or '--'
-        # Escaped narrative text for embedding directly in the hero sidebar
-        _narrative_text = (
-            narrative.replace("&", "&amp;").replace("<", "&lt;").replace(">", "&gt;")
-            if narrative else ''
-        )
+        # Pre-compute hero brief HTML before the f-string to avoid nested f-string issues
+        if narrative:
+            _safe_n = narrative.replace("&", "&amp;").replace("<", "&lt;").replace(">", "&gt;")
+            _hero_brief_html = (
+                '<div class="brief-body" id="briefBody">'
+                '<div class="brief-text">' + _safe_n + '</div>'
+                '<div class="brief-fade" id="briefFade"></div>'
+                '</div>'
+                '<button class="brief-toggle" id="briefToggle" onclick="toggleBrief()">Read More &#9660;</button>'
+            )
+        else:
+            _hero_brief_html = (
+                '<div class="brief-placeholder">No brief generated yet.'
+                '<br>Run with <code>--llm</code> flag to generate today\'s brief.</div>'
+            )
+
 
         return f"""<!DOCTYPE html>
 <html lang="en">
@@ -1556,13 +1570,38 @@ body {{
   font-style:italic;
   font-size:0.84rem; line-height:1.75;
   color:#c8c8c8;
-  flex:1;
-  /* clamp long narratives gracefully */
-  overflow:hidden;
-  display:-webkit-box;
-  -webkit-line-clamp:12;
-  -webkit-box-orient:vertical;
 }}
+.brief-body {{
+  position:relative;
+  overflow:hidden;
+  /* ~4 lines: font-size 0.84rem * line-height 1.75 * 4 */
+  max-height:calc(0.84rem * 1.75 * 4);
+  transition:max-height .35s ease;
+}}
+.brief-body.expanded {{
+  max-height:600px;
+}}
+.brief-fade {{
+  position:absolute; bottom:0; left:0; right:0;
+  height:2.2em;
+  background:linear-gradient(to bottom, transparent, var(--s2));
+  pointer-events:none;
+  transition:opacity .25s ease;
+}}
+.brief-body.expanded .brief-fade {{
+  opacity:0;
+}}
+.brief-toggle {{
+  background:none; border:none; cursor:pointer;
+  font-family:'Bebas Neue',sans-serif;
+  font-size:0.7rem; letter-spacing:2.5px;
+  color:var(--gold); opacity:.75;
+  padding:2px 0; margin-top:2px;
+  text-transform:uppercase;
+  transition:opacity .15s;
+  align-self:flex-start;
+}}
+.brief-toggle:hover {{ opacity:1; }}
 .brief-placeholder {{
   font-style:italic;
   font-size:0.8rem; color:var(--text-3);
@@ -1892,8 +1931,7 @@ footer {{
     </div>
     <div class="hero-brief">
       <div class="brief-label">AI Brief</div>
-      {"" if not _narrative_text else f'<div class="brief-text">{_narrative_text}</div>'}
-      {"" if _narrative_text else '<div class="brief-placeholder">No brief generated yet.<br>Run with <code>--llm</code> flag to generate today\'s brief.</div>'}
+      {_hero_brief_html}
     </div>
   </div>
 
@@ -2025,6 +2063,16 @@ footer {{
 <footer>
   Southern Miss RPI Bot &nbsp;·&nbsp; Data: Warren Nolan &nbsp;·&nbsp; Generated {date_str}
 </footer>
+
+<script>
+function toggleBrief() {{
+  const body   = document.getElementById('briefBody');
+  const toggle = document.getElementById('briefToggle');
+  if (!body) return;
+  const expanded = body.classList.toggle('expanded');
+  toggle.innerHTML = expanded ? 'Read Less &#9650;' : 'Read More &#9660;';
+}}
+</script>
 
 <script>
 (function() {{
