@@ -7,7 +7,6 @@ set PYTHON=python
 set LOG_FILE=%BOT_DIR%\bot_log.txt
 set HTML_FILE=index.html
 set BRIEF_FILE=daily_brief.txt
-set REPO_URL=https://github.com/jeffbank2/usm-rpi.git
 
 echo ============================================
 echo  Southern Miss RPI Bot
@@ -44,21 +43,30 @@ if errorlevel 1 (
     goto :fail
 )
 
+:: Pull latest from GitHub first to avoid conflicts
+echo [0/4] Syncing with GitHub...
+git pull --rebase origin main >> "%LOG_FILE%" 2>&1
+if errorlevel 1 (
+    echo WARNING: git pull had issues, continuing anyway...
+    echo WARNING: git pull issues >> "%LOG_FILE%"
+)
+echo       Done.
+
 :: Run the bot
 echo [1/4] Running RPI bot...
 %PYTHON% southern_miss_rpi_bot.py --llm --html "%HTML_FILE%" --no-open > "%BRIEF_FILE%" 2>> "%LOG_FILE%"
 if errorlevel 1 (
     echo ERROR: Bot failed. Check bot_log.txt for details.
-    echo ERROR: Bot script failed with errorlevel %errorlevel% >> "%LOG_FILE%"
+    echo ERROR: Bot script failed >> "%LOG_FILE%"
     goto :fail
 )
 echo       Done.
 type "%BRIEF_FILE%"
 echo.
 
-:: Stage files for Git
+:: Stage files for Git (db intentionally excluded - Actions owns it)
 echo [2/4] Staging files...
-git add "%HTML_FILE%" "%BRIEF_FILE%" >nul 2>&1
+git add "%HTML_FILE%" "%BRIEF_FILE%" southern_miss_rpi_bot.py run_rpi_bot.bat >nul 2>&1
 if errorlevel 1 (
     echo ERROR: git add failed. Is this folder a Git repo?
     echo ERROR: git add failed >> "%LOG_FILE%"
@@ -70,7 +78,7 @@ echo       Done.
 echo [3/4] Committing...
 git diff --cached --quiet
 if errorlevel 1 (
-    git commit -m "Daily update %date% %time%" >> "%LOG_FILE%" 2>&1
+    git commit -m "Manual update %date% %time%" >> "%LOG_FILE%" 2>&1
     if errorlevel 1 (
         echo ERROR: git commit failed. Check bot_log.txt.
         echo ERROR: git commit failed >> "%LOG_FILE%"

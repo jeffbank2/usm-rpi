@@ -618,6 +618,72 @@ class SouthernMissRPIBot:
         return result
 
     # ------------------------------------------------------------------
+    # Sun Belt Conference RPI Standings
+    # ------------------------------------------------------------------
+    SUN_BELT_TEAMS = {
+        "Southern Miss", "Louisiana", "Troy", "Arkansas State", "South Alabama",
+        "Louisiana Monroe", "ULM", "App State", "Appalachian State", "Georgia State",
+        "Georgia Southern", "Old Dominion", "Marshall", "James Madison", "Texas State",
+        "Louisiana Tech", "Coastal Carolina",
+    }
+
+    def get_sunbelt_standings(self) -> List[Dict[str, Any]]:
+        html = self.fetch_text(RPI_LIVE_URL)
+        soup = BeautifulSoup(html, "html.parser")
+        rows = soup.find_all("tr")
+        standings: List[Dict[str, Any]] = []
+
+        def clean_team(team: str) -> str:
+            team = re.sub(
+                r"\s+(Sun Belt|SEC|ACC|Big 12|Big Ten|AAC|C-USA|Conference USA|PAC-12|Pac-12|Big East|Big West).*",
+                "", team).strip()
+            team = re.sub(r"\s+\(\d+-\d+.*?\)$", "", team).strip()
+            return team
+
+        def extract_record(cell: str) -> Optional[str]:
+            m = re.search(r"\((\d+-\d+)\)", cell)
+            return m.group(1) if m else None
+
+        def extract_rpi_value(cell: str) -> Optional[float]:
+            m = re.search(r"(0\.\d+)", cell)
+            return float(m.group(1)) if m else None
+
+        for row in rows:
+            cells = [c.get_text(" ", strip=True) for c in row.find_all("td")]
+            if len(cells) < 2:
+                continue
+            rank_str = cells[0].strip()
+            if not rank_str.isdigit():
+                continue
+            rank = int(rank_str)
+            raw_team = cells[1] if len(cells) > 1 else ""
+            team = clean_team(raw_team)
+            record = extract_record(raw_team)
+            rpi_val = extract_rpi_value(cells[2]) if len(cells) > 2 else None
+
+            # Match against Sun Belt team list (flexible)
+            matched = None
+            for sb_team in self.SUN_BELT_TEAMS:
+                if sb_team.lower() in team.lower() or team.lower() in sb_team.lower():
+                    matched = sb_team
+                    break
+            if matched is None:
+                continue
+
+            standings.append({
+                "team":       matched,
+                "rank":       rank,
+                "rpi_val":    rpi_val,
+                "record":     record,
+                "conf_record": None,
+                "is_usm":     "southern miss" in matched.lower(),
+            })
+
+        # Sort by national RPI rank
+        standings.sort(key=lambda x: x["rank"])
+        return standings
+
+    # ------------------------------------------------------------------
     # Helpers
     # ------------------------------------------------------------------
     @staticmethod
@@ -1182,6 +1248,40 @@ class SouthernMissRPIBot:
             conf = r.get("conf") or "--"
             rivals_rows += f"<tr><td>{r['team']}</td><td>{conf}</td><td>#{rk}</td><td>{rec}</td></tr>"
 
+        # Sun Belt Conference standings — enrich with conf_record from rivals + current snapshot
+        conf_rec_lookup: Dict[str, str] = {}
+        for r in evidence.get("rivals", []):
+            if r.get("conf") == "Sun Belt" and r.get("conf_record"):
+                conf_rec_lookup[r["team"].lower()] = r["conf_record"]
+        # Add Southern Miss conf record from current snapshot
+        usm_conf_rec = current.get("conf_record")
+        if usm_conf_rec:
+            conf_rec_lookup["southern miss"] = usm_conf_rec
+
+        try:
+            sb_standings = self.get_sunbelt_standings()
+            sb_rows = ""
+            for i, s in enumerate(sb_standings):
+                rk       = s["rank"]
+                team     = s["team"]
+                rec      = s["record"] or "--"
+                conf_rec = conf_rec_lookup.get(team.lower(), "--")
+                pos      = i + 1
+                row_cls  = "sb-usm" if s["is_usm"] else ""
+                sb_rows += (
+                    f"<tr class='{row_cls}'>"
+                    f"<td>{pos}</td>"
+                    f"<td>{team}" + (" <span class='usm-tag'>YOU</span>" if s["is_usm"] else "") + "</td>"
+                    f"<td>#{rk}</td>"
+                    f"<td>{rec}</td>"
+                    f"<td>{conf_rec}</td>"
+                    f"</tr>"
+                )
+            if not sb_rows:
+                sb_rows = "<tr><td colspan='5' style='color:var(--text-3)'>No Sun Belt data found.</td></tr>"
+        except Exception:
+            sb_rows = "<tr><td colspan='5' style='color:var(--text-3)'>Unavailable.</td></tr>"
+
         try:
             radar_items = self.get_rpi_radar("Southern Miss", window=4)
             radar_html = "".join(
@@ -1742,6 +1842,8 @@ ul.radar-list li.usm {{ color:var(--gold); font-weight:500; }}
   font-weight:700; letter-spacing:.5px; vertical-align:middle;
 }}
 .conf-tag {{ color:var(--text-3); font-size:.72em; }}
+.sb-usm td {{ background:#2a2000 !important; color:var(--gold) !important; font-weight:600; }}
+.sb-usm td:first-child {{ border-left:3px solid var(--gold); }}
 
 /* ── TABLES ── */
 .tbl-wrap {{ overflow-x:auto; -webkit-overflow-scrolling:touch; }}
@@ -1998,12 +2100,15 @@ footer {{
     </div>
 
     <div class="panel">
-      <div class="panel-head"><span class="panel-title">Rival Watch</span></div>
+      <div class="panel-head">
+        <span class="panel-title">Sun Belt RPI Standings</span>
+        <span style="font-size:0.7rem;color:var(--text-3);letter-spacing:1px;">NATIONAL RANK</span>
+      </div>
       <div class="panel-body">
         <div class="tbl-wrap">
           <table>
-            <thead><tr><th>Team</th><th>Conf</th><th>RPI</th><th>Record</th></tr></thead>
-            <tbody>{rivals_rows or "<tr><td colspan='4' style='color:var(--text-3)'>No rival data.</td></tr>"}</tbody>
+            <thead><tr><th>#</th><th>Team</th><th>Nat'l RPI</th><th>Overall</th><th>Conf</th></tr></thead>
+            <tbody>{sb_rows}</tbody>
           </table>
         </div>
       </div>
@@ -2223,7 +2328,6 @@ def main() -> int:
     print("Building what-if scenarios...")
     whatif_scenarios = bot.build_whatif_scenarios(current)
     html_content     = bot.render_html_dashboard(evidence, narrative, rank_history, week_review, whatif_scenarios)
-
     html_path = Path(args.html)
     html_path.write_text(html_content, encoding="utf-8")
     print(f"\nDashboard saved: {html_path.resolve()}")
