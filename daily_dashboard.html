@@ -196,13 +196,38 @@ body {
   font-style:italic;
   font-size:0.84rem; line-height:1.75;
   color:#c8c8c8;
-  flex:1;
-  /* clamp long narratives gracefully */
-  overflow:hidden;
-  display:-webkit-box;
-  -webkit-line-clamp:12;
-  -webkit-box-orient:vertical;
 }
+.brief-body {
+  position:relative;
+  overflow:hidden;
+  /* ~4 lines: font-size 0.84rem * line-height 1.75 * 4 */
+  max-height:calc(0.84rem * 1.75 * 4);
+  transition:max-height .35s ease;
+}
+.brief-body.expanded {
+  max-height:600px;
+}
+.brief-fade {
+  position:absolute; bottom:0; left:0; right:0;
+  height:2.2em;
+  background:linear-gradient(to bottom, transparent, var(--s2));
+  pointer-events:none;
+  transition:opacity .25s ease;
+}
+.brief-body.expanded .brief-fade {
+  opacity:0;
+}
+.brief-toggle {
+  background:none; border:none; cursor:pointer;
+  font-family:'Bebas Neue',sans-serif;
+  font-size:0.7rem; letter-spacing:2.5px;
+  color:var(--gold); opacity:.75;
+  padding:2px 0; margin-top:2px;
+  text-transform:uppercase;
+  transition:opacity .15s;
+  align-self:flex-start;
+}
+.brief-toggle:hover { opacity:1; }
 .brief-placeholder {
   font-style:italic;
   font-size:0.8rem; color:var(--text-3);
@@ -532,12 +557,9 @@ footer {
     </div>
     <div class="hero-brief">
       <div class="brief-label">AI Brief</div>
-      <div class="brief-text">Southern Miss maintains its firm grip on the No. 1 RPI spot at 0.6851, holding steady despite a slight dip in value from 0.6909. The team improved its overall record to 17-4 with a confident 4-0 win over Nicholls on neutral ground, boosting their Q3 record to 1-0. Despite a tough 1-2 start in conference play, the Golden Eagles’ strength of schedule remains elite, ranked 2nd nationally, though it is beginning a soft stretch with upcoming opponents averaging an RPI near 86. This softer slate may limit chances to add more high-quality wins and could pose risks if focus lapses.
+      <div class="brief-body" id="briefBody"><div class="brief-text">Southern Miss holds firm at RPI No. 1 with a 17-4 record after a commanding 4-0 neutral-site win over Nicholls, boosting their Q3 mark to 1-0. Although the RPI value slipped slightly from 0.6909 to 0.6851, maintaining the top spot underscores their season-long consistency and dominance. 
 
-Southern Miss recently split a challenging series at Arkansas State (RPI 22), winning one and losing two, further fortifying their resume with quality games. Looking ahead, Southern Miss hosts Troy (RPI 71) this weekend, presenting a manageable Q3 opportunity at Pete Taylor Park. Following that, a Tuesday road test against Mississippi State (RPI 17) offers a prime chance to reaffirm their top spot against a top-20 opponent.
-
-While the schedule eases, the Golden Eagles must capitalize, especially in these upcoming series, to preserve their national seed projection. Confidence is warranted, but maintaining high-level execution remains crucial as they continue to build a formidable postseason profile.</div>
-      
+The team's SOS remains ranked No. 2 but is trending softer with an average upcoming opponent RPI of 86, limiting Q1/Q2 win opportunities. The key series to watch is the three-game home set against Troy (RPI 71), crucial for reaffirming Southern Miss’s national seed positioning before facing No. 17 Mississippi State on the road.</div><div class="brief-fade" id="briefFade"></div></div><button class="brief-toggle" id="briefToggle" onclick="toggleBrief()">Read More &#9660;</button>
     </div>
   </div>
 
@@ -673,7 +695,7 @@ While the schedule eases, the Golden Eagles must capitalize, especially in these
                     <span class="q-badge q3">Q3</span>
                     <span class="stakes-badge" style="background:#ffa94022;color:#ffa940;border:1px solid #ffa94044">LOW STAKES</span>
                   </div>
-                  <p class="gpt-stake">Southern Miss risks dropping from RPI #1 to #3 if they get swept by Troy this weekend.</p>
+                  <p class="gpt-stake">Southern Miss must sweep Troy to secure RPI #1; a sweep loss drops them to #3.</p>
                   <div class="wi-outcomes">
                     <div class="wi-outcome win-outcome">
                       <div class="wi-label"><span class="tip" data-tip="Projected RPI rank if Southern Miss wins this game or sweeps this series.">IF WIN</span></div>
@@ -696,7 +718,7 @@ While the schedule eases, the Golden Eagles must capitalize, especially in these
                     <span class="q-badge q1">Q1</span>
                     <span class="stakes-badge" style="background:#00c85322;color:#00c853;border:1px solid #00c85344">HIGH STAKES</span>
                   </div>
-                  <p class="gpt-stake">Southern Miss must sweep Mississippi State to secure RPI #1; getting swept drops them to #2.</p>
+                  <p class="gpt-stake">Southern Miss must sweep Mississippi State away to secure and retain the No. 1 RPI spot.</p>
                   <div class="wi-outcomes">
                     <div class="wi-outcome win-outcome">
                       <div class="wi-label"><span class="tip" data-tip="Projected RPI rank if Southern Miss wins this game or sweeps this series.">IF WIN</span></div>
@@ -734,6 +756,16 @@ While the schedule eases, the Golden Eagles must capitalize, especially in these
 <footer>
   Southern Miss RPI Bot &nbsp;·&nbsp; Data: Warren Nolan &nbsp;·&nbsp; Generated 2026-03-18
 </footer>
+
+<script>
+function toggleBrief() {
+  const body   = document.getElementById('briefBody');
+  const toggle = document.getElementById('briefToggle');
+  if (!body) return;
+  const expanded = body.classList.toggle('expanded');
+  toggle.innerHTML = expanded ? 'Read Less &#9650;' : 'Read More &#9660;';
+}
+</script>
 
 <script>
 (function() {
