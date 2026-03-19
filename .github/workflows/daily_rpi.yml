@@ -32,7 +32,8 @@ jobs:
         run: |
           git config user.name "RPI Bot"
           git config user.email "bankston.jeff@gmail.com"
-          git add index.html southern_miss_rpi.db daily_brief.txt bot_log.txt
+          git add index.html daily_brief.txt bot_log.txt southern_miss_rpi_bot.py
+          git add -f southern_miss_rpi.db
           git diff --staged --quiet || git commit -m "Daily RPI update $(date +'%Y-%m-%d')"
           git pull --rebase origin main
           git push
