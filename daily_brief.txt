@@ -3,47 +3,44 @@ Collecting rival snapshots (6 teams)...
 Generating GPT narrative...
 
 --- GPT Narrative ---
-Southern Miss remains firmly at the top of the RPI rankings, holding No. 1 with a 17-4 overall record after a commanding 4-0 neutral site win over Nicholls (RPI 142). The Q3 record improved to 1-0, sustaining their national seed status despite a slight dip in RPI value. The team’s resilience on the road and neutral sites reinforces their position.
+Southern Miss debuts as the No. 1 RPI seed with a 17-4 overall record, earning this top spot by beating high-quality opponents like Ole Miss (RPI 6) and maintaining a strong 5-2 road record. Despite a 1-2 conference start and split series at Arkansas State (RPI 21), their dominant non-conference wins, including a 4-0 neutral site shutout versus Nicholls, cement their elite status.
 
-The strength of schedule sits second but is trending softer ahead, with an average upcoming opponent RPI of 86 and limited chances for Q1/Q2 quality wins. Fans should watch the home series against Troy (RPI 71), a critical opportunity to bolster their resume before facing tougher tests like Mississippi State.
+Their SOS ranks 2nd nationally at 0.6473 but faces challenges ahead as the next slate softens, facing average opponent RPI of 83. The upcoming home series against Troy (RPI 61) is key to sustaining momentum before a pivotal road outing at Mississippi State (RPI 15).
 ---------------------
 
-Southern Miss RPI Daily Brief | 2026-03-18
+Southern Miss RPI Daily Brief | 2026-03-19
 
-RPI Rank:  1 -> 1
-RPI Value: 0.6909 -> 0.6851
-SOS Rank:  2 -> 2
-Record:    16-4 -> 17-4
+RPI Rank:  1
+RPI Value: 0.6857
+SOS Rank:  2
+Record:    17-4
 
 Host Outlook: National seed territory
 
 Trend Summary:
-- Flat in rank, record changed +1W / +0L.
+- No trend available yet.
 
 Why it moved:
-- RPI rank did not change from the prior snapshot.
-- Win against Nicholls (neutral, RPI 142, Southland, Q3).
-- Q3 record changed from 0-0 to 1-0.
+- No prior snapshot exists yet. Today's run establishes the baseline.
 
-SOS Trajectory: Upcoming schedule is soft -- avg opponent RPI 86. Limited Q1/Q2 opportunities.
+SOS Trajectory: Upcoming schedule is soft -- avg opponent RPI 83. Limited Q1/Q2 opportunities.
 
 RPI Radar:
 - #1 Southern Miss (Sun Belt) <
 - #2 Auburn (SEC)
 - #3 Florida State (ACC)
-- #4 USC
+- #4 Texas (SEC)
 
 Impact Games / Watchlist:
-- Impact page includes direct games against Southern Miss and indirect games involving prior opponents.
-- Upcoming: Troy (home, RPI 71, Sun Belt, Q3).
 
 Rival Watch:
+- UC Santa Barbara (Big West): RPI #5, 14-4
 - Ole Miss (SEC): RPI #6, 17-5
-- UC Santa Barbara (Big West): RPI #7, 14-4
-- Mississippi State (SEC): RPI #17, 17-4
-- Coastal Carolina (Sun Belt): RPI #20, 13-6
-- Arkansas State (Sun Belt): RPI #22, 15-6
-- LSU (SEC): RPI #112, 15-7
+- Mississippi State (SEC): RPI #15, 17-4
+- Arkansas State (Sun Belt): RPI #21, 15-6
+- Coastal Carolina (Sun Belt): RPI #28, 13-7
+- LSU (SEC): RPI #113, 15-7
 Building what-if scenarios...
+Collecting Sun Belt conf records...
 
 Dashboard saved: C:\Users\jeffb\Desktop\SouthernMissRPIBot\index.html

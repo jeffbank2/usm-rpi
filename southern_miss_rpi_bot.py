@@ -63,6 +63,23 @@ RIVAL_TEAMS: Dict[str, str] = {
     "UC Santa Barbara":  "UC-Santa-Barbara",
 }
 
+SUN_BELT_SLUGS: Dict[str, str] = {
+    "Southern Miss":    "Southern-Miss",
+    "Louisiana":        "Louisiana",
+    "Troy":             "Troy",
+    "Arkansas State":   "Arkansas-State",
+    "South Alabama":    "South-Alabama",
+    "Louisiana Monroe": "Louisiana-Monroe",
+    "App State":        "App-State",
+    "Georgia State":    "Georgia-State",
+    "Georgia Southern": "Georgia-Southern",
+    "Old Dominion":     "Old-Dominion",
+    "Marshall":         "Marshall",
+    "James Madison":    "James-Madison",
+    "Texas State":      "Texas-State",
+    "Louisiana Tech":   "Louisiana-Tech",
+    "Coastal Carolina": "Coastal-Carolina",
+}
 # ---------------------------------------------------------------------------
 # Conference lookup table
 # ---------------------------------------------------------------------------
@@ -480,9 +497,19 @@ class SouthernMissRPIBot:
                 })
         return rivals
 
-    # ------------------------------------------------------------------
-    # Database: save / retrieve
-    # ------------------------------------------------------------------
+    def collect_sunbelt_conf_records(self) -> Dict[str, str]:
+        """Fetch conf records for all Sun Belt teams. Returns {team_name: conf_record}."""
+        conf_records: Dict[str, str] = {}
+        for name, slug in SUN_BELT_SLUGS.items():
+            try:
+                schedule_html = self.fetch_text(f"{BASE}/schedule/{slug}")
+                schedule_text = self.html_to_text(schedule_html)
+                rec = self._extract_simple_value(schedule_text, "Conf")
+                if rec:
+                    conf_records[name.lower()] = rec
+            except Exception as exc:
+                self._log(f"Could not fetch conf record for {name}: {exc}")
+        return conf_records
     def save_snapshot(self, snapshot: TeamSnapshot) -> None:
         conn = sqlite3.connect(self.db_path)
         today = snapshot.captured_at[:10]
@@ -631,7 +658,7 @@ class SouthernMissRPIBot:
         html = self.fetch_text(RPI_LIVE_URL)
         soup = BeautifulSoup(html, "html.parser")
         rows = soup.find_all("tr")
-        standings: List[Dict[str, Any]] = []
+        seen: Dict[str, Dict[str, Any]] = {}  # team -> best entry
 
         def clean_team(team: str) -> str:
             team = re.sub(
@@ -670,17 +697,20 @@ class SouthernMissRPIBot:
             if matched is None:
                 continue
 
-            standings.append({
-                "team":       matched,
-                "rank":       rank,
-                "rpi_val":    rpi_val,
-                "record":     record,
-                "conf_record": None,
-                "is_usm":     "southern miss" in matched.lower(),
-            })
+            # Keep only the best (lowest) rank per team
+            key = matched.lower()
+            if key not in seen or rank < seen[key]["rank"]:
+                seen[key] = {
+                    "team":        matched,
+                    "rank":        rank,
+                    "rpi_val":     rpi_val,
+                    "record":      record,
+                    "conf_record": None,
+                    "is_usm":      "southern miss" in matched.lower(),
+                }
 
         # Sort by national RPI rank
-        standings.sort(key=lambda x: x["rank"])
+        standings = sorted(seen.values(), key=lambda x: x["rank"])
         return standings
 
     # ------------------------------------------------------------------
@@ -1199,6 +1229,7 @@ class SouthernMissRPIBot:
         rank_history: List[Dict],
         week_review: str,
         whatif_scenarios: Optional[List[Dict]] = None,
+        sb_conf_records: Optional[Dict[str, str]] = None,
     ) -> str:
         current  = evidence["current"]
         rank     = current.get("rpi_rank") or 0
@@ -1248,12 +1279,9 @@ class SouthernMissRPIBot:
             conf = r.get("conf") or "--"
             rivals_rows += f"<tr><td>{r['team']}</td><td>{conf}</td><td>#{rk}</td><td>{rec}</td></tr>"
 
-        # Sun Belt Conference standings — enrich with conf_record from rivals + current snapshot
-        conf_rec_lookup: Dict[str, str] = {}
-        for r in evidence.get("rivals", []):
-            if r.get("conf") == "Sun Belt" and r.get("conf_record"):
-                conf_rec_lookup[r["team"].lower()] = r["conf_record"]
-        # Add Southern Miss conf record from current snapshot
+        # Sun Belt Conference standings — enrich with conf_record from sb_conf_records
+        conf_rec_lookup: Dict[str, str] = dict(sb_conf_records) if sb_conf_records else {}
+        # Ensure Southern Miss conf record from current snapshot takes priority
         usm_conf_rec = current.get("conf_record")
         if usm_conf_rec:
             conf_rec_lookup["southern miss"] = usm_conf_rec
@@ -2327,7 +2355,9 @@ def main() -> int:
     week_review      = bot.build_week_review()
     print("Building what-if scenarios...")
     whatif_scenarios = bot.build_whatif_scenarios(current)
-    html_content     = bot.render_html_dashboard(evidence, narrative, rank_history, week_review, whatif_scenarios)
+    print("Collecting Sun Belt conf records...")
+    sb_conf_records  = bot.collect_sunbelt_conf_records()
+    html_content     = bot.render_html_dashboard(evidence, narrative, rank_history, week_review, whatif_scenarios, sb_conf_records)
     html_path = Path(args.html)
     html_path.write_text(html_content, encoding="utf-8")
     print(f"\nDashboard saved: {html_path.resolve()}")
