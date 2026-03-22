@@ -2023,6 +2023,65 @@ footer {{
   padding:22px clamp(16px,4vw,48px);
   border-top:1px solid var(--border);
 }}
+
+/* ── INFO BANNER ── */
+.info-banner {{
+  background:linear-gradient(135deg,#0d0900 0%,var(--s1) 60%);
+  border:1px solid rgba(245,197,24,.18);
+  border-left:3px solid var(--gold);
+  border-radius:var(--r);
+  padding:14px 20px;
+  display:flex; align-items:center; gap:16px; flex-wrap:wrap;
+}}
+.info-banner-text {{ flex:1; min-width:220px; font-size:0.84rem; color:var(--text-2); line-height:1.6; }}
+.info-banner-text strong {{ color:var(--gold); }}
+.info-banner-meta {{ font-size:0.72rem; color:var(--text-3); margin-top:5px; letter-spacing:.5px; }}
+.copy-btn {{
+  background:var(--gold-dim); color:var(--gold);
+  border:1px solid rgba(245,197,24,.35);
+  border-radius:8px; padding:9px 18px;
+  font-family:'Bebas Neue',sans-serif;
+  font-size:0.78rem; letter-spacing:2px;
+  cursor:pointer; white-space:nowrap;
+  transition:background .15s, border-color .15s;
+}}
+.copy-btn:hover {{ background:rgba(245,197,24,.22); border-color:var(--gold); }}
+.copy-btn.copied {{ color:var(--green); border-color:var(--green); background:var(--green-dim); }}
+
+/* ── RPI EXPLAINER ── */
+.explainer-toggle {{
+  width:100%; background:none; border:none;
+  display:flex; align-items:center; gap:10px;
+  padding:14px 18px 12px; cursor:pointer; text-align:left;
+}}
+.explainer-toggle:hover .panel-title {{ color:#ffe066; }}
+.explainer-chevron {{
+  font-size:0.7rem; color:var(--text-3);
+  transition:transform .25s ease; flex-shrink:0; margin-left:auto;
+}}
+.explainer-chevron.open {{ transform:rotate(180deg); }}
+.explainer-body {{
+  max-height:0; overflow:hidden;
+  transition:max-height .35s ease, padding .25s ease;
+  padding:0 18px;
+}}
+.explainer-body.open {{ max-height:700px; padding:0 18px 18px; }}
+.explainer-grid {{
+  display:grid;
+  grid-template-columns:repeat(auto-fit,minmax(240px,1fr));
+  gap:12px; margin-top:4px;
+}}
+.explainer-block {{
+  background:var(--s2); border:1px solid var(--border-sub);
+  border-radius:8px; padding:14px 16px;
+}}
+.explainer-block h4 {{
+  font-family:'Bebas Neue',sans-serif;
+  font-size:0.75rem; letter-spacing:2px;
+  color:var(--gold); margin-bottom:8px;
+}}
+.explainer-block p {{ font-size:0.8rem; color:var(--text-2); line-height:1.65; }}
+.explainer-block strong {{ color:var(--text); }}
 </style>
 </head>
 <body>
@@ -2096,6 +2155,15 @@ footer {{
       <span class="split-lbl">Neutral</span>
       <span class="split-val">{_neut_rec}</span>
     </div>
+  </div>
+
+  <!-- DESCRIPTION BANNER -->
+  <div class="info-banner">
+    <div class="info-banner-text">
+      <strong>Southern Miss Baseball RPI Tracker</strong> — Automated daily tracker pulling live RPI, SOS, and schedule data from Warren Nolan. Bookmark it and check back every morning during the season to follow Southern Miss's NCAA Tournament positioning.
+      <div class="info-banner-meta">&#128197;&nbsp; Last updated: {date_str} &nbsp;·&nbsp; Data: Warren Nolan &nbsp;·&nbsp; Updates every morning</div>
+    </div>
+    <button class="copy-btn" id="copyBtn" onclick="copyDashLink()">&#128279;&nbsp; Copy Link</button>
   </div>
 
   <!-- ROW 1: QUADRANTS · TREND CHART · RPI RADAR -->
@@ -2205,6 +2273,34 @@ footer {{
     </div>
   </div>
 
+  <!-- WHAT IS RPI? (collapsible explainer) -->
+  <div class="panel">
+    <button class="explainer-toggle" onclick="toggleExplainer()" id="explainerToggle" aria-expanded="false">
+      <span class="panel-title">What is RPI?</span>
+      <span class="explainer-chevron" id="explainerChevron">&#9660;</span>
+    </button>
+    <div class="explainer-body" id="explainerBody">
+      <div class="explainer-grid">
+        <div class="explainer-block">
+          <h4>The Formula</h4>
+          <p>RPI stands for <strong>Ratings Percentage Index</strong>. It's calculated from three components: <strong>25%</strong> your own winning percentage, <strong>50%</strong> your opponents' winning percentage, and <strong>25%</strong> your opponents' opponents' winning percentage. That heavy weight on <em>who you play</em> is why scheduling tough opponents matters — even losses against elite teams can help your RPI.</p>
+        </div>
+        <div class="explainer-block">
+          <h4>Why It Matters for USM</h4>
+          <p>The NCAA Tournament selection committee uses RPI as a key factor when choosing and seeding the 64-team field. A top-30 RPI puts Southern Miss in national seed contention. Falling below #50 makes earning an at-large bid much harder. Every conference series and non-conference road trip directly shapes the number on this dashboard.</p>
+        </div>
+        <div class="explainer-block">
+          <h4>The Quadrant System</h4>
+          <p>The committee grades wins and losses by <strong>quadrant</strong> based on opponent RPI and game location. <strong>Q1 wins</strong> (top opponents, neutral/road) are the gold standard. <strong>Q4 losses</strong> (weak opponents at home) are the most damaging to a tournament résumé. Stacking Q1 and Q2 wins is the fastest way to improve seeding.</p>
+        </div>
+        <div class="explainer-block">
+          <h4>The Road to Omaha</h4>
+          <p>Sun Belt teams typically need a conference title or top-1-2 finish to earn an automatic bid. But a strong RPI opens the door to national seeds and home regional hosting — a massive advantage. Hosting a regional means playing the first two weekends at Pete Taylor Park, where USM has historically dominated. RPI is the key to that path.</p>
+        </div>
+      </div>
+    </div>
+  </div>
+
   <!-- WHAT-IF (conditional full width, wraps itself in .card) -->
   {whatif_section}
 
@@ -2221,6 +2317,28 @@ function toggleBrief() {{
   if (!body) return;
   const expanded = body.classList.toggle('expanded');
   toggle.innerHTML = expanded ? 'Read Less &#9650;' : 'Read More &#9660;';
+}}
+function copyDashLink() {{
+  const url = 'https://jeffbank2.github.io/usm-rpi';
+  navigator.clipboard.writeText(url).then(() => {{
+    const btn = document.getElementById('copyBtn');
+    btn.textContent = '✓  Copied!';
+    btn.classList.add('copied');
+    setTimeout(() => {{
+      btn.innerHTML = '&#128279;&nbsp; Copy Link';
+      btn.classList.remove('copied');
+    }}, 2200);
+  }}).catch(() => {{
+    prompt('Copy this link:', url);
+  }});
+}}
+function toggleExplainer() {{
+  const body    = document.getElementById('explainerBody');
+  const chevron = document.getElementById('explainerChevron');
+  const toggle  = document.getElementById('explainerToggle');
+  const open    = body.classList.toggle('open');
+  chevron.classList.toggle('open', open);
+  toggle.setAttribute('aria-expanded', open);
 }}
 </script>
 
