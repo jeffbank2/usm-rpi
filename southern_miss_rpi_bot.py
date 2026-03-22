@@ -45,6 +45,15 @@ IMPACT_URL     = f"{BASE}/team-impact?team=Southern-Miss"
 RANK_URL       = f"{BASE}/team-rank?team=Southern-Miss"
 RPI_LIVE_URL   = f"{BASE}/rpi-live"
 
+_SEASON_YEAR = BASE.rsplit("/", 1)[-1]   # "2026"
+PLAYER_STATS_BATTING_URL = (
+    f"https://southernmiss.com/cumestats.aspx?path=baseball&year={_SEASON_YEAR}"
+)
+PLAYER_STATS_PDF_URL = (
+    "https://s3.us-east-2.amazonaws.com/sidearm.nextgen.sites/"
+    f"southernmiss.com/stats/baseball/{_SEASON_YEAR}/pdf/cume.pdf"
+)
+
 USER_AGENT = (
     "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) "
     "AppleWebKit/537.36 (KHTML, like Gecko) "
@@ -514,6 +523,140 @@ class SouthernMissRPIBot:
             except Exception as exc:
                 self._log(f"Could not fetch records for {name}: {exc}")
         return records
+
+    # ------------------------------------------------------------------
+    # Player stats
+    # ------------------------------------------------------------------
+    def collect_player_stats(self) -> Dict[str, Any]:
+        """Fetch batting (HTML) and pitching (PDF) stats for the roster."""
+        self._log("Fetching player stats...")
+        return {
+            "batters":  self._fetch_batting_stats(),
+            "pitchers": self._fetch_pitching_stats(),
+        }
+
+    def _fetch_batting_stats(self) -> List[Dict[str, str]]:
+        try:
+            html  = self.fetch_text(PLAYER_STATS_BATTING_URL)
+            soup  = BeautifulSoup(html, "html.parser")
+            table = soup.find("table", class_=lambda c: c and "s-table" in " ".join(c if isinstance(c, list) else [c]))
+            if not table:
+                table = soup.find("table")
+            if not table:
+                return []
+            tbody   = table.find("tbody") or table
+            batters: List[Dict[str, str]] = []
+            for row in tbody.find_all("tr"):
+                cells = [td.get_text(strip=True) for td in row.find_all("td")]
+                if len(cells) < 19:
+                    continue
+                name_raw = cells[1]
+                if not name_raw or "total" in name_raw.lower():
+                    continue
+                try:
+                    ab = int(cells[5])
+                except ValueError:
+                    ab = 0
+                if ab < 1:
+                    continue
+                batters.append({
+                    "jersey": cells[0],
+                    "name":   self._fmt_name(name_raw),
+                    "avg":    cells[2]  or "--",
+                    "ops":    cells[3]  or "--",
+                    "ab":     cells[5]  or "--",
+                    "h":      cells[7]  or "--",
+                    "hr":     cells[10] or "--",
+                    "rbi":    cells[11] or "--",
+                    "slg":    cells[13] or "--",
+                    "obp":    cells[18] or "--",
+                })
+            # Default sort: AVG descending
+            batters.sort(key=lambda x: float(x["avg"]) if x["avg"] not in ("--", "") else -1, reverse=True)
+            self._log(f"Fetched {len(batters)} batters")
+            return batters
+        except Exception as exc:
+            self._log(f"Batting stats error: {exc}")
+            return []
+
+    def _fetch_pitching_stats(self) -> List[Dict[str, str]]:
+        try:
+            import io
+            import pdfplumber
+            resp = self.session.get(PLAYER_STATS_PDF_URL, timeout=30)
+            resp.raise_for_status()
+            with pdfplumber.open(io.BytesIO(resp.content)) as pdf:
+                full_text = "\n".join(page.extract_text() or "" for page in pdf.pages)
+            # Find pitching section by its column-header line
+            m = re.search(r"ERA\s+W-L\s+APP", full_text)
+            if not m:
+                self._log("Pitching section not found in PDF")
+                return []
+            pitch_text = full_text[m.end():]
+            # Trim at fielding section
+            stop = re.search(r"\bFLD%\b|Fielding\b", pitch_text)
+            if stop:
+                pitch_text = pitch_text[: stop.start()]
+            # Row pattern: jersey  Last, First  ERA  W-L  APP  GS  CG  SHO-SV  SV  IP  H  R  ER  BB  SO
+            row_re = re.compile(
+                r"^\s*(\d+)\s+"                             # jersey
+                r"([\w']+,\s+[\w]+(?:\s+[\w]+)?)\s+"       # Last, First [Middle]
+                r"(\d+\.\d+)\s+"                            # ERA
+                r"(\d+-\d+)\s+"                             # W-L
+                r"(\d+)\s+"                                 # APP
+                r"\d+\s+\d+\s+\d+-\d+\s+\d+\s+"           # GS CG SHO SV
+                r"([\d.]+)\s+"                              # IP
+                r"(\d+)\s+\d+\s+\d+\s+"                    # H R ER
+                r"(\d+)\s+"                                 # BB
+                r"(\d+)",                                   # SO
+                re.MULTILINE,
+            )
+            pitchers: List[Dict[str, str]] = []
+            for m2 in row_re.finditer(pitch_text):
+                jersey, name_raw, era, wl, app, ip, h, bb, so = (
+                    m2.group(1), m2.group(2), m2.group(3), m2.group(4),
+                    m2.group(5), m2.group(6), m2.group(7), m2.group(8), m2.group(9),
+                )
+                pitchers.append({
+                    "jersey": jersey,
+                    "name":   self._fmt_name(name_raw),
+                    "era":    era,
+                    "wl":     wl,
+                    "app":    app,
+                    "ip":     ip,
+                    "h":      h,
+                    "bb":     bb,
+                    "so":     so,
+                    "whip":   self._calc_whip(ip, h, bb),
+                })
+            # Default sort: ERA ascending
+            pitchers.sort(key=lambda x: float(x["era"]) if x["era"] not in ("--", "") else 99)
+            self._log(f"Fetched {len(pitchers)} pitchers")
+            return pitchers
+        except Exception as exc:
+            self._log(f"Pitching stats error: {exc}")
+            return []
+
+    @staticmethod
+    def _fmt_name(raw: str) -> str:
+        """Convert 'Last, First' to 'First Last'."""
+        if "," in raw:
+            last, first = raw.split(",", 1)
+            return f"{first.strip()} {last.strip()}"
+        return raw.strip()
+
+    @staticmethod
+    def _calc_whip(ip: str, h: str, bb: str) -> str:
+        """Calculate WHIP = (H + BB) / IP."""
+        try:
+            parts   = str(ip).split(".")
+            innings = int(parts[0]) + (int(parts[1]) / 3.0 if len(parts) > 1 and parts[1] else 0)
+            if innings == 0:
+                return "--"
+            return f"{(int(h) + int(bb)) / innings:.2f}"
+        except Exception:
+            return "--"
+
     def save_snapshot(self, snapshot: TeamSnapshot) -> None:
         conn = sqlite3.connect(self.db_path)
         today = snapshot.captured_at[:10]
@@ -1234,6 +1377,7 @@ class SouthernMissRPIBot:
         week_review: str,
         whatif_scenarios: Optional[List[Dict]] = None,
         sb_conf_records: Optional[Dict[str, str]] = None,
+        player_stats: Optional[Dict[str, Any]] = None,
     ) -> str:
         current  = evidence["current"]
         rank     = current.get("rpi_rank") or 0
@@ -1462,6 +1606,43 @@ class SouthernMissRPIBot:
     <p style="font-size:0.7rem;color:var(--text-3);margin-top:12px;">Projections are directional estimates based on RPI weight modeling. Not a simulation.</p>
   </div>
 '''
+
+        # ── player stats section ──
+        ps          = player_stats or {}
+        batters     = ps.get("batters", [])
+        pitchers    = ps.get("pitchers", [])
+        hitters_rows = ""
+        for b in batters:
+            hitters_rows += (
+                f"<tr>"
+                f"<td><span class='ps-jersey'>#{b['jersey']}</span> {b['name']}</td>"
+                f"<td class='ps-num'>{b['avg']}</td>"
+                f"<td class='ps-num'>{b['obp']}</td>"
+                f"<td class='ps-num'>{b['slg']}</td>"
+                f"<td class='ps-num ps-ops'>{b['ops']}</td>"
+                f"<td class='ps-num'>{b['hr']}</td>"
+                f"<td class='ps-num'>{b['rbi']}</td>"
+                f"<td class='ps-num ps-dim'>{b['ab']}</td>"
+                f"</tr>"
+            )
+        pitchers_rows = ""
+        for p in pitchers:
+            pitchers_rows += (
+                f"<tr>"
+                f"<td><span class='ps-jersey'>#{p['jersey']}</span> {p['name']}</td>"
+                f"<td class='ps-num'>{p['era']}</td>"
+                f"<td class='ps-num'>{p['whip']}</td>"
+                f"<td class='ps-num'>{p['wl']}</td>"
+                f"<td class='ps-num ps-dim'>{p['app']}</td>"
+                f"<td class='ps-num ps-dim'>{p['ip']}</td>"
+                f"<td class='ps-num'>{p['so']}</td>"
+                f"<td class='ps-num ps-dim'>{p['bb']}</td>"
+                f"</tr>"
+            )
+        if not hitters_rows:
+            hitters_rows = "<tr><td colspan='8' style='color:var(--text-3)'>Stats unavailable.</td></tr>"
+        if not pitchers_rows:
+            pitchers_rows = "<tr><td colspan='8' style='color:var(--text-3)'>Stats unavailable.</td></tr>"
 
         # ── template-only helpers (presentation, not data logic) ──
         _is_one = (rank == 1)
@@ -2024,6 +2205,28 @@ footer {{
   border-top:1px solid var(--border);
 }}
 
+/* ── PLAYER STATS ── */
+.sort-th {{
+  cursor:pointer; user-select:none;
+  transition:color .15s;
+}}
+.sort-th:hover {{ color:var(--gold) !important; }}
+.sort-th.asc::after  {{ content:' \2191'; color:var(--gold); font-size:0.65em; }}
+.sort-th.desc::after {{ content:' \2193'; color:var(--gold); font-size:0.65em; }}
+.ps-num  {{ font-family:'JetBrains Mono',monospace; font-size:0.8rem; text-align:right; }}
+.ps-ops  {{ color:var(--gold) !important; font-weight:600; }}
+.ps-dim  {{ color:var(--text-3) !important; }}
+.ps-jersey {{
+  display:inline-block; min-width:26px;
+  font-family:'JetBrains Mono',monospace;
+  font-size:0.68rem; color:var(--text-3);
+}}
+.stats-note {{
+  font-size:0.7rem; color:var(--text-3);
+  margin-top:10px; padding-top:10px;
+  border-top:1px solid var(--border-sub);
+}}
+
 /* ── INFO BANNER ── */
 .info-banner {{
   background:linear-gradient(135deg,#0d0900 0%,var(--s1) 60%);
@@ -2273,6 +2476,61 @@ footer {{
     </div>
   </div>
 
+  <!-- PLAYER STATS -->
+  <div class="row row-2">
+
+    <div class="panel">
+      <div class="panel-head">
+        <span class="panel-title">Hitters</span>
+        <span class="tip" data-tip="Batting stats from southernmiss.com. Click any column header to sort. Default: AVG descending.">&#x24D8;</span>
+      </div>
+      <div class="panel-body">
+        <div class="tbl-wrap">
+          <table id="hittersTable">
+            <thead><tr>
+              <th class="sort-th" onclick="sortStatsTable('hittersTable',0,false)">Player</th>
+              <th class="sort-th" onclick="sortStatsTable('hittersTable',1,true)" data-sort-dir="desc">AVG <span style="color:var(--gold);font-size:.65em;">&#8595;</span></th>
+              <th class="sort-th" onclick="sortStatsTable('hittersTable',2,true)">OBP</th>
+              <th class="sort-th" onclick="sortStatsTable('hittersTable',3,true)">SLG</th>
+              <th class="sort-th" onclick="sortStatsTable('hittersTable',4,true)">OPS</th>
+              <th class="sort-th" onclick="sortStatsTable('hittersTable',5,true)">HR</th>
+              <th class="sort-th" onclick="sortStatsTable('hittersTable',6,true)">RBI</th>
+              <th class="sort-th" onclick="sortStatsTable('hittersTable',7,true)">AB</th>
+            </tr></thead>
+            <tbody>{hitters_rows}</tbody>
+          </table>
+        </div>
+        <p class="stats-note">Source: southernmiss.com &nbsp;·&nbsp; Min. 1 AB &nbsp;·&nbsp; Click headers to sort</p>
+      </div>
+    </div>
+
+    <div class="panel">
+      <div class="panel-head">
+        <span class="panel-title">Pitchers</span>
+        <span class="tip" data-tip="Pitching stats from the season PDF. WHIP calculated as (H+BB)/IP. Click any column header to sort. Default: ERA ascending.">&#x24D8;</span>
+      </div>
+      <div class="panel-body">
+        <div class="tbl-wrap">
+          <table id="pitchersTable">
+            <thead><tr>
+              <th class="sort-th" onclick="sortStatsTable('pitchersTable',0,false)">Player</th>
+              <th class="sort-th" onclick="sortStatsTable('pitchersTable',1,true)" data-sort-dir="asc">ERA <span style="color:var(--gold);font-size:.65em;">&#8593;</span></th>
+              <th class="sort-th" onclick="sortStatsTable('pitchersTable',2,true)">WHIP</th>
+              <th class="sort-th" onclick="sortStatsTable('pitchersTable',3,false)">W-L</th>
+              <th class="sort-th" onclick="sortStatsTable('pitchersTable',4,true)">APP</th>
+              <th class="sort-th" onclick="sortStatsTable('pitchersTable',5,true)">IP</th>
+              <th class="sort-th" onclick="sortStatsTable('pitchersTable',6,true)">SO</th>
+              <th class="sort-th" onclick="sortStatsTable('pitchersTable',7,true)">BB</th>
+            </tr></thead>
+            <tbody>{pitchers_rows}</tbody>
+          </table>
+        </div>
+        <p class="stats-note">Source: southernmiss.com season PDF &nbsp;·&nbsp; WHIP = (H+BB)/IP &nbsp;·&nbsp; Click headers to sort</p>
+      </div>
+    </div>
+
+  </div>
+
   <!-- WHAT IS RPI? (collapsible explainer) -->
   <div class="panel">
     <button class="explainer-toggle" onclick="toggleExplainer()" id="explainerToggle" aria-expanded="false">
@@ -2339,6 +2597,36 @@ function toggleExplainer() {{
   const open    = body.classList.toggle('open');
   chevron.classList.toggle('open', open);
   toggle.setAttribute('aria-expanded', open);
+}}
+function sortStatsTable(tableId, colIdx, numeric) {{
+  const tbl   = document.getElementById(tableId);
+  const tbody = tbl.querySelector('tbody');
+  const rows  = Array.from(tbody.querySelectorAll('tr'));
+  const ths   = tbl.querySelectorAll('thead th');
+  const th    = ths[colIdx];
+  const asc   = th.dataset.sortDir !== 'asc';
+  rows.sort((a, b) => {{
+    const av = a.cells[colIdx].textContent.trim();
+    const bv = b.cells[colIdx].textContent.trim();
+    if (numeric) {{
+      const an = parseFloat(av);
+      const bn = parseFloat(bv);
+      const af = isNaN(an) ? (asc ? Infinity : -Infinity) : an;
+      const bf = isNaN(bn) ? (asc ? Infinity : -Infinity) : bn;
+      return asc ? af - bf : bf - af;
+    }}
+    return asc ? av.localeCompare(bv) : bv.localeCompare(av);
+  }});
+  ths.forEach(h => {{
+    h.dataset.sortDir = '';
+    h.classList.remove('asc', 'desc');
+    // Remove any inline sort arrow spans
+    const arrow = h.querySelector('span[data-arrow]');
+    if (arrow) arrow.remove();
+  }});
+  th.dataset.sortDir = asc ? 'asc' : 'desc';
+  th.classList.add(asc ? 'asc' : 'desc');
+  rows.forEach(r => tbody.appendChild(r));
 }}
 </script>
 
@@ -2492,7 +2780,9 @@ def main() -> int:
     whatif_scenarios = bot.build_whatif_scenarios(current)
     print("Collecting Sun Belt records...")
     sb_conf_records  = bot.collect_sunbelt_conf_records()
-    html_content     = bot.render_html_dashboard(evidence, narrative, rank_history, week_review, whatif_scenarios, sb_conf_records)
+    print("Collecting player stats...")
+    player_stats     = bot.collect_player_stats()
+    html_content     = bot.render_html_dashboard(evidence, narrative, rank_history, week_review, whatif_scenarios, sb_conf_records, player_stats)
     html_path = Path(args.html)
     html_path.write_text(html_content, encoding="utf-8")
     print(f"\nDashboard saved: {html_path.resolve()}")
