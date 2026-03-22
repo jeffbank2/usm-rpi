@@ -2319,7 +2319,7 @@ function toggleBrief() {{
   toggle.innerHTML = expanded ? 'Read Less &#9650;' : 'Read More &#9660;';
 }}
 function copyDashLink() {{
-  const url = 'https://jeffbank2.github.io/usm-rpi';
+  const url = 'https://southernmissrpi.com';
   navigator.clipboard.writeText(url).then(() => {{
     const btn = document.getElementById('copyBtn');
     btn.textContent = '✓  Copied!';
