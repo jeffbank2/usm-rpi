@@ -1456,10 +1456,10 @@ class SouthernMissRPIBot:
     <h2 style="color:#f5c518;">What-If Scenarios <span class="tip" data-tip="Directional projections of how Southern Miss RPI rank could move based on winning or losing each upcoming game or series. Not a simulation — shows relative stakes.">&#x24D8;</span></h2>
     <div class="wi-cards-row">{whatif_cards_html}</div>
     <div style="margin-top:20px;">
-      <div style="font-size:0.72rem;color:#666;text-transform:uppercase;letter-spacing:1px;margin-bottom:8px;">Full Schedule Scenario Matrix</div>
+      <div style="font-size:0.72rem;color:var(--text-3);text-transform:uppercase;letter-spacing:1px;margin-bottom:8px;">Full Schedule Scenario Matrix</div>
       {whatif_matrix_html}
     </div>
-    <p style="font-size:0.7rem;color:#555;margin-top:12px;">Projections are directional estimates based on RPI weight modeling. Not a simulation.</p>
+    <p style="font-size:0.7rem;color:var(--text-3);margin-top:12px;">Projections are directional estimates based on RPI weight modeling. Not a simulation.</p>
   </div>
 '''
 
@@ -1549,8 +1549,8 @@ class SouthernMissRPIBot:
   --border:     #222;
   --border-sub: #181818;
   --text:       #f0f0f0;
-  --text-2:     #a0a0a0;
-  --text-3:     #555;
+  --text-2:     #c0c0c0;
+  --text-3:     #909090;
   --green:      #00e676;
   --green-dim:  rgba(0,230,118,.12);
   --red:        #ff5252;
@@ -1714,7 +1714,7 @@ body {{
 .brief-text {{
   font-style:italic;
   font-size:0.84rem; line-height:1.75;
-  color:#c8c8c8;
+  color:#dcdcdc;
 }}
 .brief-body {{
   position:relative;
@@ -1756,7 +1756,7 @@ body {{
   font-style:normal;
   font-family:'JetBrains Mono',monospace;
   font-size:0.75rem;
-  background:var(--s3); color:#888;
+  background:var(--s3); color:#b8b8b8;
   padding:1px 6px; border-radius:4px;
 }}
 
@@ -1925,7 +1925,7 @@ tbody tr:hover td {{ background:var(--s2); }}
   background:var(--s2); border-radius:8px;
   padding:14px 16px;
   font-family:'JetBrains Mono',monospace;
-  font-size:0.74rem; color:#888; line-height:2.0;
+  font-size:0.74rem; color:#c0c0c0; line-height:2.0;
 }}
 
 /* ── WHAT-IF (classes used by Python-generated whatif_section) ── */
@@ -1950,7 +1950,7 @@ tbody tr:hover td {{ background:var(--s2); }}
   letter-spacing:1px; text-transform:uppercase;
 }}
 .gpt-stake {{
-  font-style:italic; font-size:0.83rem; color:#aaa;
+  font-style:italic; font-size:0.83rem; color:#c0c0c0;
   border-left:2px solid rgba(245,197,24,.3);
   padding-left:12px; line-height:1.65;
 }}
@@ -2378,7 +2378,7 @@ function toggleExplainer() {{
           borderColor: '#333',
           borderWidth: 1,
           titleColor: '#f5c518',
-          bodyColor: '#888',
+          bodyColor: '#c0c0c0',
           padding: 10,
           displayColors: false,
           callbacks: {{
@@ -2390,18 +2390,18 @@ function toggleExplainer() {{
       scales: {{
         y: {{
           reverse: true,
-          ticks: {{ color: '#4a4a4a', font: {{ size: 10, family: "'Inter'" }} }},
+          ticks: {{ color: '#888888', font: {{ size: 10, family: "'Inter'" }} }},
           grid: {{ color: 'rgba(255,255,255,0.04)' }},
           border: {{ color: 'rgba(255,255,255,0.06)' }},
           title: {{
             display: true,
             text: 'Rank  (lower = better)',
-            color: '#3a3a3a',
+            color: '#707070',
             font: {{ size: 9, weight: '600' }}
           }}
         }},
         x: {{
-          ticks: {{ color: '#4a4a4a', maxTicksLimit: 7, font: {{ size: 10 }} }},
+          ticks: {{ color: '#888888', maxTicksLimit: 7, font: {{ size: 10 }} }},
           grid: {{ color: 'rgba(255,255,255,0.02)' }},
           border: {{ color: 'rgba(255,255,255,0.06)' }}
         }}
