@@ -4,6 +4,14 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Southern Miss RPI — 2026-03-22</title>
+<!-- Google Analytics -->
+<script async src="https://www.googletagmanager.com/gtag/js?id=G-TSNBFTDKSN"></script>
+<script>
+  window.dataLayer = window.dataLayer || [];
+  function gtag(){dataLayer.push(arguments);}
+  gtag('js', new Date());
+  gtag('config', 'G-TSNBFTDKSN');
+</script>
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
@@ -30,8 +38,8 @@
   --border:     #222;
   --border-sub: #181818;
   --text:       #f0f0f0;
-  --text-2:     #a0a0a0;
-  --text-3:     #555;
+  --text-2:     #c0c0c0;
+  --text-3:     #909090;
   --green:      #00e676;
   --green-dim:  rgba(0,230,118,.12);
   --red:        #ff5252;
@@ -195,7 +203,7 @@ body {
 .brief-text {
   font-style:italic;
   font-size:0.84rem; line-height:1.75;
-  color:#c8c8c8;
+  color:#dcdcdc;
 }
 .brief-body {
   position:relative;
@@ -237,7 +245,7 @@ body {
   font-style:normal;
   font-family:'JetBrains Mono',monospace;
   font-size:0.75rem;
-  background:var(--s3); color:#888;
+  background:var(--s3); color:#b8b8b8;
   padding:1px 6px; border-radius:4px;
 }
 
@@ -406,7 +414,7 @@ tbody tr:hover td { background:var(--s2); }
   background:var(--s2); border-radius:8px;
   padding:14px 16px;
   font-family:'JetBrains Mono',monospace;
-  font-size:0.74rem; color:#888; line-height:2.0;
+  font-size:0.74rem; color:#c0c0c0; line-height:2.0;
 }
 
 /* ── WHAT-IF (classes used by Python-generated whatif_section) ── */
@@ -431,7 +439,7 @@ tbody tr:hover td { background:var(--s2); }
   letter-spacing:1px; text-transform:uppercase;
 }
 .gpt-stake {
-  font-style:italic; font-size:0.83rem; color:#aaa;
+  font-style:italic; font-size:0.83rem; color:#c0c0c0;
   border-left:2px solid rgba(245,197,24,.3);
   padding-left:12px; line-height:1.65;
 }
@@ -504,6 +512,65 @@ footer {
   padding:22px clamp(16px,4vw,48px);
   border-top:1px solid var(--border);
 }
+
+/* ── INFO BANNER ── */
+.info-banner {
+  background:linear-gradient(135deg,#0d0900 0%,var(--s1) 60%);
+  border:1px solid rgba(245,197,24,.18);
+  border-left:3px solid var(--gold);
+  border-radius:var(--r);
+  padding:14px 20px;
+  display:flex; align-items:center; gap:16px; flex-wrap:wrap;
+}
+.info-banner-text { flex:1; min-width:220px; font-size:0.84rem; color:var(--text-2); line-height:1.6; }
+.info-banner-text strong { color:var(--gold); }
+.info-banner-meta { font-size:0.72rem; color:var(--text-3); margin-top:5px; letter-spacing:.5px; }
+.copy-btn {
+  background:var(--gold-dim); color:var(--gold);
+  border:1px solid rgba(245,197,24,.35);
+  border-radius:8px; padding:9px 18px;
+  font-family:'Bebas Neue',sans-serif;
+  font-size:0.78rem; letter-spacing:2px;
+  cursor:pointer; white-space:nowrap;
+  transition:background .15s, border-color .15s;
+}
+.copy-btn:hover { background:rgba(245,197,24,.22); border-color:var(--gold); }
+.copy-btn.copied { color:var(--green); border-color:var(--green); background:var(--green-dim); }
+
+/* ── RPI EXPLAINER ── */
+.explainer-toggle {
+  width:100%; background:none; border:none;
+  display:flex; align-items:center; gap:10px;
+  padding:14px 18px 12px; cursor:pointer; text-align:left;
+}
+.explainer-toggle:hover .panel-title { color:#ffe066; }
+.explainer-chevron {
+  font-size:0.7rem; color:var(--text-3);
+  transition:transform .25s ease; flex-shrink:0; margin-left:auto;
+}
+.explainer-chevron.open { transform:rotate(180deg); }
+.explainer-body {
+  max-height:0; overflow:hidden;
+  transition:max-height .35s ease, padding .25s ease;
+  padding:0 18px;
+}
+.explainer-body.open { max-height:700px; padding:0 18px 18px; }
+.explainer-grid {
+  display:grid;
+  grid-template-columns:repeat(auto-fit,minmax(240px,1fr));
+  gap:12px; margin-top:4px;
+}
+.explainer-block {
+  background:var(--s2); border:1px solid var(--border-sub);
+  border-radius:8px; padding:14px 16px;
+}
+.explainer-block h4 {
+  font-family:'Bebas Neue',sans-serif;
+  font-size:0.75rem; letter-spacing:2px;
+  color:var(--gold); margin-bottom:8px;
+}
+.explainer-block p { font-size:0.8rem; color:var(--text-2); line-height:1.65; }
+.explainer-block strong { color:var(--text); }
 </style>
 </head>
 <body>
@@ -529,7 +596,7 @@ footer {
     <div class="hero-rank">
       <div class="rank-eyebrow">RPI Rank</div>
       <div class="rank-number">#4</div>
-      <div class="rank-delta-row"><span class="delta down">-2</span></div>
+      <div class="rank-delta-row"><span class="delta down">-3</span></div>
     </div>
     <div class="hero-stats">
       <div class="hstat">
@@ -559,9 +626,9 @@ footer {
     </div>
     <div class="hero-brief">
       <div class="brief-label">AI Brief</div>
-      <div class="brief-body" id="briefBody"><div class="brief-text">Southern Miss slipped two spots to 4th in the RPI with a 19-5 overall record. The drop follows a tough weekend split at Arkansas State (RPI 27) and back-to-back wins over Troy (RPI 41), shifting their Q1 record to 5-2 and boosting their Q2 to 10-2. Despite the slight rank decline, the Eagles’ 2-game winning streak affirms their strong form.
+      <div class="brief-body" id="briefBody"><div class="brief-text">Southern Miss slipped three spots to No. 4 in RPI with a 19-5 record after dropping a game to Troy, though they closed the series with two wins. The dip reflects a tougher conference balance at 3-3 and fewer quality wins early, shifting Q1 to 5-2 from 10-3 previously. Their recent strong Q2 (10-2) helps maintain national seed territory despite the slide.
 
-Their strength of schedule also fell two spots to 4th as upcoming matchups soften, averaging an opponent RPI of 123. The key test looms Tuesday at #6 Mississippi State (RPI 10), a critical opportunity to maintain national seed status.</div><div class="brief-fade" id="briefFade"></div></div><button class="brief-toggle" id="briefToggle" onclick="toggleBrief()">Read More &#9660;</button>
+The Golden Eagles face a soft upcoming schedule, averaging opponent RPI near 122, which limits chances to boost SOS now ranked fourth. The marquee test lies ahead Tuesday at No. 10 Mississippi State, a critical series that could solidify or threaten their top seed standing.</div><div class="brief-fade" id="briefFade"></div></div><button class="brief-toggle" id="briefToggle" onclick="toggleBrief()">Read More &#9660;</button>
     </div>
   </div>
 
@@ -581,6 +648,15 @@ Their strength of schedule also fell two spots to 4th as upcoming matchups softe
     </div>
   </div>
 
+  <!-- DESCRIPTION BANNER -->
+  <div class="info-banner">
+    <div class="info-banner-text">
+      <strong>Southern Miss Baseball RPI Tracker</strong> — Automated daily tracker pulling live RPI, SOS, and schedule data from Warren Nolan. Bookmark it and check back every morning during the season to follow Southern Miss's NCAA Tournament positioning.
+      <div class="info-banner-meta">&#128197;&nbsp; Last updated: 2026-03-22 &nbsp;·&nbsp; Data: Warren Nolan &nbsp;·&nbsp; Updates every morning</div>
+    </div>
+    <button class="copy-btn" id="copyBtn" onclick="copyDashLink()">&#128279;&nbsp; Copy Link</button>
+  </div>
+
   <!-- ROW 1: QUADRANTS · TREND CHART · RPI RADAR -->
   <div class="row row-3">
 
@@ -591,7 +667,7 @@ Their strength of schedule also fell two spots to 4th as upcoming matchups softe
       </div>
       <div class="panel-body">
         <div class="q-row"><div class="q-card"><div class="q-label"><span class="tip" data-tip="Toughest games. Home vs RPI 1-25, Neutral 1-40, Away 1-60. These wins matter most to the NCAA selection committee.">Q1</span></div><div class="q-val">5-2</div></div><div class="q-card"><div class="q-label"><span class="tip" data-tip="Solid games. Home vs RPI 26-50, Neutral 41-80, Away 61-120. Good wins, manageable losses.">Q2</span></div><div class="q-val">10-2</div></div><div class="q-card"><div class="q-label"><span class="tip" data-tip="Below-average games. Home vs RPI 51-100, Neutral 81-160, Away 121-240. Wins expected, losses hurt.">Q3</span></div><div class="q-val">1-0</div></div><div class="q-card"><div class="q-label"><span class="tip" data-tip="Weakest games. Home vs RPI 101+. Wins count little — losses here are most damaging.">Q4</span></div><div class="q-val">3-1</div></div></div>
-        <div class="sos-note">Upcoming schedule is soft -- avg opponent RPI 123. Limited Q1/Q2 opportunities.</div>
+        <div class="sos-note">Upcoming schedule is soft -- avg opponent RPI 122. Limited Q1/Q2 opportunities.</div>
       </div>
     </div>
 
@@ -623,7 +699,7 @@ Their strength of schedule also fell two spots to 4th as upcoming matchups softe
     <div class="panel">
       <div class="panel-head"><span class="panel-title">Why It Moved</span></div>
       <div class="panel-body">
-        <ul class="ilist"><li>RPI rank slipped by 2 spot(s).</li><li>Win against Troy (home, RPI 41, Sun Belt, Q2).</li><li>Strength of schedule worsened by 2 spot(s).</li><li>Q1 record changed from 11-3 to 5-2.</li><li>Q2 record changed from 2-1 to 10-2.</li></ul>
+        <ul class="ilist"><li>RPI rank slipped by 3 spot(s).</li><li>Win against Troy (home, RPI 41, Sun Belt, Q2).</li><li>Strength of schedule worsened by 2 spot(s).</li><li>Q1 record changed from 10-3 to 5-2.</li><li>Q2 record changed from 3-0 to 10-2.</li></ul>
       </div>
     </div>
 
@@ -636,7 +712,7 @@ Their strength of schedule also fell two spots to 4th as upcoming matchups softe
         <div class="tbl-wrap">
           <table>
             <thead><tr><th>#</th><th>Team</th><th>Nat'l RPI</th><th>Overall</th><th>Conf</th></tr></thead>
-            <tbody><tr class=''><td>1</td><td>Texas State</td><td>#2</td><td>15-8</td><td>3-3</td></tr><tr class='sb-usm'><td>2</td><td>Southern Miss <span class='usm-tag'>YOU</span></td><td>#4</td><td>19-5</td><td>3-3</td></tr><tr class=''><td>3</td><td>South Alabama</td><td>#13</td><td>16-8</td><td>3-3</td></tr><tr class=''><td>4</td><td>Louisiana</td><td>#17</td><td>16-8</td><td>2-4</td></tr><tr class=''><td>5</td><td>Coastal Carolina</td><td>#18</td><td>16-7</td><td>6-0</td></tr><tr class=''><td>6</td><td>Arkansas State</td><td>#27</td><td>16-8</td><td>3-3</td></tr><tr class=''><td>7</td><td>Troy</td><td>#41</td><td>10-13</td><td>3-3</td></tr><tr class=''><td>8</td><td>Georgia Southern</td><td>#43</td><td>6-17</td><td>1-5</td></tr><tr class=''><td>9</td><td>Georgia State</td><td>#102</td><td>13-12</td><td>2-4</td></tr><tr class=''><td>10</td><td>ULM</td><td>#155</td><td>--</td><td>--</td></tr><tr class=''><td>11</td><td>Marshall</td><td>#158</td><td>13-9</td><td>5-1</td></tr><tr class=''><td>12</td><td>James Madison</td><td>#159</td><td>11-11</td><td>3-3</td></tr><tr class=''><td>13</td><td>Appalachian State</td><td>#173</td><td>--</td><td>--</td></tr><tr class=''><td>14</td><td>Old Dominion</td><td>#237</td><td>11-11</td><td>2-4</td></tr></tbody>
+            <tbody><tr class=''><td>1</td><td>Texas State</td><td>#2</td><td>15-8</td><td>3-3</td></tr><tr class='sb-usm'><td>2</td><td>Southern Miss <span class='usm-tag'>YOU</span></td><td>#4</td><td>19-5</td><td>3-3</td></tr><tr class=''><td>3</td><td>South Alabama</td><td>#13</td><td>16-8</td><td>3-3</td></tr><tr class=''><td>4</td><td>Louisiana Monroe</td><td>#17</td><td>-</td><td>-</td></tr><tr class=''><td>5</td><td>Coastal Carolina</td><td>#18</td><td>16-7</td><td>6-0</td></tr><tr class=''><td>6</td><td>Arkansas State</td><td>#27</td><td>16-8</td><td>3-3</td></tr><tr class=''><td>7</td><td>Troy</td><td>#41</td><td>10-13</td><td>3-3</td></tr><tr class=''><td>8</td><td>Georgia Southern</td><td>#43</td><td>6-17</td><td>1-5</td></tr><tr class=''><td>9</td><td>Louisiana</td><td>#65</td><td>16-8</td><td>2-4</td></tr><tr class=''><td>10</td><td>Georgia State</td><td>#102</td><td>13-12</td><td>2-4</td></tr><tr class=''><td>11</td><td>ULM</td><td>#155</td><td>--</td><td>--</td></tr><tr class=''><td>12</td><td>Marshall</td><td>#160</td><td>13-9</td><td>5-1</td></tr><tr class=''><td>13</td><td>James Madison</td><td>#161</td><td>11-11</td><td>3-3</td></tr><tr class=''><td>14</td><td>Appalachian State</td><td>#172</td><td>--</td><td>--</td></tr><tr class=''><td>15</td><td>Old Dominion</td><td>#238</td><td>11-11</td><td>2-4</td></tr></tbody>
           </table>
         </div>
       </div>
@@ -660,7 +736,7 @@ Their strength of schedule also fell two spots to 4th as upcoming matchups softe
         <div class="tbl-wrap">
           <table>
             <thead><tr><th>Opponent</th><th>Site</th><th>Opp RPI</th><th>Quadrant</th><th>Time</th></tr></thead>
-            <tbody><tr><td>Mississippi State <small class='conf-tag'>(SEC)</small></td><td>Away</td><td>10</td><td><span class='q-badge q1'>Q1</span></td><td>7:00 PM</td></tr><tr><td>Appalachian State <small class='conf-tag'>(Sun Belt)</small></td><td>Home</td><td>173</td><td><span class='q-badge q4'>Q4</span></td><td>7:00 PM</td></tr><tr><td>Appalachian State <small class='conf-tag'>(Sun Belt)</small></td><td>Home</td><td>173</td><td><span class='q-badge q4'>Q4</span></td><td>3:00 PM</td></tr><tr><td>Appalachian State <small class='conf-tag'>(Sun Belt)</small></td><td>Home</td><td>173</td><td><span class='q-badge q4'>Q4</span></td><td>2:00 PM</td></tr><tr><td>outheastern Louisiana</td><td>Home</td><td>87</td><td><span class='q-badge q3'>Q3</span></td><td>7:00 PM</td></tr></tbody>
+            <tbody><tr><td>Mississippi State <small class='conf-tag'>(SEC)</small></td><td>Away</td><td>10</td><td><span class='q-badge q1'>Q1</span></td><td>7:00 PM</td></tr><tr><td>Appalachian State <small class='conf-tag'>(Sun Belt)</small></td><td>Home</td><td>172</td><td><span class='q-badge q4'>Q4</span></td><td>7:00 PM</td></tr><tr><td>Appalachian State <small class='conf-tag'>(Sun Belt)</small></td><td>Home</td><td>172</td><td><span class='q-badge q4'>Q4</span></td><td>3:00 PM</td></tr><tr><td>Appalachian State <small class='conf-tag'>(Sun Belt)</small></td><td>Home</td><td>172</td><td><span class='q-badge q4'>Q4</span></td><td>2:00 PM</td></tr><tr><td>outheastern Louisiana</td><td>Home</td><td>86</td><td><span class='q-badge q3'>Q3</span></td><td>7:00 PM</td></tr></tbody>
           </table>
         </div>
       </div>
@@ -672,7 +748,7 @@ Their strength of schedule also fell two spots to 4th as upcoming matchups softe
         <div class="tbl-wrap">
           <table>
             <thead><tr><th>Opponent</th><th>Result</th><th>Site</th><th>Opp RPI</th></tr></thead>
-            <tbody><tr><td>Arkansas State</td><td class='loss'>L 5-8</td><td>Away</td><td>27</td></tr><tr><td>Arkansas State</td><td class='win'>W 7-1</td><td>Away</td><td>27</td></tr><tr><td>Arkansas State</td><td class='loss'>L 2-5</td><td>Away</td><td>27</td></tr><tr><td>Nicholls</td><td class='win'>W 4-0</td><td>Neutral</td><td>118</td></tr><tr><td>Troy</td><td class='loss'>L 5-6</td><td>Home</td><td>41</td></tr><tr><td>Troy</td><td class='win'>W 11-5</td><td>Home</td><td>41</td></tr><tr><td>Troy</td><td class='win'>W 5-4</td><td>Home</td><td>41</td></tr></tbody>
+            <tbody><tr><td>Arkansas State</td><td class='loss'>L 5-8</td><td>Away</td><td>27</td></tr><tr><td>Arkansas State</td><td class='win'>W 7-1</td><td>Away</td><td>27</td></tr><tr><td>Arkansas State</td><td class='loss'>L 2-5</td><td>Away</td><td>27</td></tr><tr><td>Nicholls</td><td class='win'>W 4-0</td><td>Neutral</td><td>114</td></tr><tr><td>Troy</td><td class='loss'>L 5-6</td><td>Home</td><td>41</td></tr><tr><td>Troy</td><td class='win'>W 11-5</td><td>Home</td><td>41</td></tr><tr><td>Troy</td><td class='win'>W 5-4</td><td>Home</td><td>41</td></tr></tbody>
           </table>
         </div>
       </div>
@@ -684,7 +760,35 @@ Their strength of schedule also fell two spots to 4th as upcoming matchups softe
   <div class="panel">
     <div class="panel-head"><span class="panel-title">Impact Games / Watchlist</span></div>
     <div class="panel-body">
-      <ul class="ilist"><li>Impact page includes direct games against Southern Miss and indirect games involving prior opponents.</li><li>Upcoming: Mississippi State (away, RPI 10, SEC, Q1).</li><li>Upcoming: Appalachian State (home, RPI 173, Sun Belt, Q4).</li></ul>
+      <ul class="ilist"><li>Impact page includes direct games against Southern Miss and indirect games involving prior opponents.</li><li>Upcoming: Mississippi State (away, RPI 10, SEC, Q1).</li><li>Upcoming: Appalachian State (home, RPI 172, Sun Belt, Q4).</li></ul>
+    </div>
+  </div>
+
+  <!-- WHAT IS RPI? (collapsible explainer) -->
+  <div class="panel">
+    <button class="explainer-toggle" onclick="toggleExplainer()" id="explainerToggle" aria-expanded="false">
+      <span class="panel-title">What is RPI?</span>
+      <span class="explainer-chevron" id="explainerChevron">&#9660;</span>
+    </button>
+    <div class="explainer-body" id="explainerBody">
+      <div class="explainer-grid">
+        <div class="explainer-block">
+          <h4>The Formula</h4>
+          <p>RPI stands for <strong>Ratings Percentage Index</strong>. It's calculated from three components: <strong>25%</strong> your own winning percentage, <strong>50%</strong> your opponents' winning percentage, and <strong>25%</strong> your opponents' opponents' winning percentage. That heavy weight on <em>who you play</em> is why scheduling tough opponents matters — even losses against elite teams can help your RPI.</p>
+        </div>
+        <div class="explainer-block">
+          <h4>Why It Matters for USM</h4>
+          <p>The NCAA Tournament selection committee uses RPI as a key factor when choosing and seeding the 64-team field. A top-30 RPI puts Southern Miss in national seed contention. Falling below #50 makes earning an at-large bid much harder. Every conference series and non-conference road trip directly shapes the number on this dashboard.</p>
+        </div>
+        <div class="explainer-block">
+          <h4>The Quadrant System</h4>
+          <p>The committee grades wins and losses by <strong>quadrant</strong> based on opponent RPI and game location. <strong>Q1 wins</strong> (top opponents, neutral/road) are the gold standard. <strong>Q4 losses</strong> (weak opponents at home) are the most damaging to a tournament résumé. Stacking Q1 and Q2 wins is the fastest way to improve seeding.</p>
+        </div>
+        <div class="explainer-block">
+          <h4>The Road to Omaha</h4>
+          <p>Sun Belt teams typically need a conference title or top-1-2 finish to earn an automatic bid. But a strong RPI opens the door to national seeds and home regional hosting — a massive advantage. Hosting a regional means playing the first two weekends at Pete Taylor Park, where USM has historically dominated. RPI is the key to that path.</p>
+        </div>
+      </div>
     </div>
   </div>
 
@@ -700,7 +804,7 @@ Their strength of schedule also fell two spots to 4th as upcoming matchups softe
                     <span class="q-badge q1">Q1</span>
                     <span class="stakes-badge" style="background:#00c85322;color:#00c853;border:1px solid #00c85344">HIGH STAKES</span>
                   </div>
-                  <p class="gpt-stake">Southern Miss must win at Mississippi State to climb from RPI #4 to #2; losing drops them to #5.</p>
+                  <p class="gpt-stake">Southern Miss must sweep Mississippi State to climb to RPI #2; getting swept drops them to #5.</p>
                   <div class="wi-outcomes">
                     <div class="wi-outcome win-outcome">
                       <div class="wi-label"><span class="tip" data-tip="Projected RPI rank if Southern Miss wins this game or sweeps this series.">IF WIN</span></div>
@@ -719,11 +823,11 @@ Their strength of schedule also fell two spots to 4th as upcoming matchups softe
                 <div class="wi-card">
                   <div class="wi-header">
                     <span class="wi-opp">Appalachian State (3-game series) <small class="conf-tag">(Sun Belt)</small></span>
-                    <span class="wi-meta">Home &nbsp;|&nbsp; Opp RPI #173 &nbsp;|&nbsp; 7:00 PM</span>
+                    <span class="wi-meta">Home &nbsp;|&nbsp; Opp RPI #172 &nbsp;|&nbsp; 7:00 PM</span>
                     <span class="q-badge q4">Q4</span>
                     <span class="stakes-badge" style="background:#88822;color:#888;border:1px solid #88844">MINIMAL STAKES</span>
                   </div>
-                  <p class="gpt-stake">Southern Miss must avoid losses to Appalachian State to protect tournament résumé despite minimal RPI impact.</p>
+                  <p class="gpt-stake">Southern Miss risks a damaging resume hit with little RPI gain in a must-win series against low-ranked Appalachian State.</p>
                   <div class="wi-outcomes">
                     <div class="wi-outcome win-outcome">
                       <div class="wi-label"><span class="tip" data-tip="Projected RPI rank if Southern Miss wins this game or sweeps this series.">IF WIN</span></div>
@@ -740,7 +844,7 @@ Their strength of schedule also fell two spots to 4th as upcoming matchups softe
                   </div>
                 </div></div>
     <div style="margin-top:20px;">
-      <div style="font-size:0.72rem;color:#666;text-transform:uppercase;letter-spacing:1px;margin-bottom:8px;">Full Schedule Scenario Matrix</div>
+      <div style="font-size:0.72rem;color:var(--text-3);text-transform:uppercase;letter-spacing:1px;margin-bottom:8px;">Full Schedule Scenario Matrix</div>
       
             <table>
               <thead>
@@ -749,10 +853,10 @@ Their strength of schedule also fell two spots to 4th as upcoming matchups softe
                   <th style="color:#00c853">If Win</th><th style="color:#ff4d4f">If Loss</th>
                 </tr>
               </thead>
-              <tbody><tr><td>Mississippi State <small class='conf-tag'>(SEC)</small></td><td>Away</td><td>#10</td><td><span class='q-badge q1'>Q1</span></td><td class='win'>#2 (+2)</td><td class='loss'>#5 (-1)</td></tr><tr><td>Appalachian State (3-game series) <small class='conf-tag'>(Sun Belt)</small></td><td>Home</td><td>#173</td><td><span class='q-badge q4'>Q4</span></td><td class=''>#4 (+0)</td><td class=''>#4 (-0) <span class='wi-upset-tag'>resume</span></td></tr><tr><td>outheastern Louisiana</td><td>Home</td><td>#87</td><td><span class='q-badge q3'>Q3</span></td><td class='win'>#3 (+1)</td><td class='loss'>#5 (-1)</td></tr></tbody>
+              <tbody><tr><td>Mississippi State <small class='conf-tag'>(SEC)</small></td><td>Away</td><td>#10</td><td><span class='q-badge q1'>Q1</span></td><td class='win'>#2 (+2)</td><td class='loss'>#5 (-1)</td></tr><tr><td>Appalachian State (3-game series) <small class='conf-tag'>(Sun Belt)</small></td><td>Home</td><td>#172</td><td><span class='q-badge q4'>Q4</span></td><td class=''>#4 (+0)</td><td class=''>#4 (-0) <span class='wi-upset-tag'>resume</span></td></tr><tr><td>outheastern Louisiana</td><td>Home</td><td>#86</td><td><span class='q-badge q3'>Q3</span></td><td class='win'>#3 (+1)</td><td class='loss'>#5 (-1)</td></tr></tbody>
             </table>
     </div>
-    <p style="font-size:0.7rem;color:#555;margin-top:12px;">Projections are directional estimates based on RPI weight modeling. Not a simulation.</p>
+    <p style="font-size:0.7rem;color:var(--text-3);margin-top:12px;">Projections are directional estimates based on RPI weight modeling. Not a simulation.</p>
   </div>
 
 
@@ -770,6 +874,28 @@ function toggleBrief() {
   const expanded = body.classList.toggle('expanded');
   toggle.innerHTML = expanded ? 'Read Less &#9650;' : 'Read More &#9660;';
 }
+function copyDashLink() {
+  const url = 'https://jeffbank2.github.io/usm-rpi';
+  navigator.clipboard.writeText(url).then(() => {
+    const btn = document.getElementById('copyBtn');
+    btn.textContent = '✓  Copied!';
+    btn.classList.add('copied');
+    setTimeout(() => {
+      btn.innerHTML = '&#128279;&nbsp; Copy Link';
+      btn.classList.remove('copied');
+    }, 2200);
+  }).catch(() => {
+    prompt('Copy this link:', url);
+  });
+}
+function toggleExplainer() {
+  const body    = document.getElementById('explainerBody');
+  const chevron = document.getElementById('explainerChevron');
+  const toggle  = document.getElementById('explainerToggle');
+  const open    = body.classList.toggle('open');
+  chevron.classList.toggle('open', open);
+  toggle.setAttribute('aria-expanded', open);
+}
 </script>
 
 <script>
@@ -782,10 +908,10 @@ function toggleBrief() {
   new Chart(ctx, {
     type: 'line',
     data: {
-      labels: ["2026-03-19", "2026-03-20", "2026-03-21", "2026-03-22"],
+      labels: ["2026-03-19", "2026-03-22"],
       datasets: [{
         label: 'RPI Rank',
-        data: [1, 1, 2, 4],
+        data: [1, 4],
         borderColor: '#f5c518',
         borderWidth: 2.5,
         backgroundColor: grad,
@@ -808,7 +934,7 @@ function toggleBrief() {
           borderColor: '#333',
           borderWidth: 1,
           titleColor: '#f5c518',
-          bodyColor: '#888',
+          bodyColor: '#c0c0c0',
           padding: 10,
           displayColors: false,
           callbacks: {
@@ -820,18 +946,18 @@ function toggleBrief() {
       scales: {
         y: {
           reverse: true,
-          ticks: { color: '#4a4a4a', font: { size: 10, family: "'Inter'" } },
+          ticks: { color: '#888888', font: { size: 10, family: "'Inter'" } },
           grid: { color: 'rgba(255,255,255,0.04)' },
           border: { color: 'rgba(255,255,255,0.06)' },
           title: {
             display: true,
             text: 'Rank  (lower = better)',
-            color: '#3a3a3a',
+            color: '#707070',
             font: { size: 9, weight: '600' }
           }
         },
         x: {
-          ticks: { color: '#4a4a4a', maxTicksLimit: 7, font: { size: 10 } },
+          ticks: { color: '#888888', maxTicksLimit: 7, font: { size: 10 } },
           grid: { color: 'rgba(255,255,255,0.02)' },
           border: { color: 'rgba(255,255,255,0.06)' }
         }
