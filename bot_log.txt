@@ -106,3 +106,15 @@ To https://github.com/jeffbank2/usm-rpi.git
    f84c4da..559552f  main -> main
 Success: Tue 03/17/2026  5:48:50.13 
 Run complete: Tue 03/17/2026  5:48:50.15 
+============================================ 
+Run started: Thu 03/19/2026 15:13:52.68 
+============================================ 
+error: cannot pull with rebase: You have unstaged changes.
+error: Please commit or stash them.
+WARNING: git pull issues 
+[main 5e2f2b5] Manual update Thu 03/19/2026 15:14:34.00
+ 3 files changed, 72 insertions(+), 45 deletions(-)
+To https://github.com/jeffbank2/usm-rpi.git
+   7e75312..5e2f2b5  main -> main
+Success: Thu 03/19/2026 15:14:35.97 
+Run complete: Thu 03/19/2026 15:14:35.97 
