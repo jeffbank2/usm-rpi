@@ -497,19 +497,23 @@ class SouthernMissRPIBot:
                 })
         return rivals
 
-    def collect_sunbelt_conf_records(self) -> Dict[str, str]:
-        """Fetch conf records for all Sun Belt teams. Returns {team_name: conf_record}."""
-        conf_records: Dict[str, str] = {}
+    def collect_sunbelt_conf_records(self) -> Dict[str, Dict[str, str]]:
+        """Fetch overall and conf records for all Sun Belt teams.
+        Returns {team_name: {"overall": str, "conf": str}}."""
+        records: Dict[str, Dict[str, str]] = {}
         for name, slug in SUN_BELT_SLUGS.items():
             try:
                 schedule_html = self.fetch_text(f"{BASE}/schedule/{slug}")
                 schedule_text = self.html_to_text(schedule_html)
-                rec = self._extract_simple_value(schedule_text, "Conf")
-                if rec:
-                    conf_records[name.lower()] = rec
+                overall_rec = self._extract_simple_value(schedule_text, "Overall")
+                conf_rec    = self._extract_simple_value(schedule_text, "Conf")
+                records[name.lower()] = {
+                    "overall": overall_rec or "",
+                    "conf":    conf_rec    or "",
+                }
             except Exception as exc:
-                self._log(f"Could not fetch conf record for {name}: {exc}")
-        return conf_records
+                self._log(f"Could not fetch records for {name}: {exc}")
+        return records
     def save_snapshot(self, snapshot: TeamSnapshot) -> None:
         conn = sqlite3.connect(self.db_path)
         today = snapshot.captured_at[:10]
@@ -1279,12 +1283,16 @@ class SouthernMissRPIBot:
             conf = r.get("conf") or "--"
             rivals_rows += f"<tr><td>{r['team']}</td><td>{conf}</td><td>#{rk}</td><td>{rec}</td></tr>"
 
-        # Sun Belt Conference standings — enrich with conf_record from sb_conf_records
-        conf_rec_lookup: Dict[str, str] = dict(sb_conf_records) if sb_conf_records else {}
-        # Ensure Southern Miss conf record from current snapshot takes priority
-        usm_conf_rec = current.get("conf_record")
-        if usm_conf_rec:
-            conf_rec_lookup["southern miss"] = usm_conf_rec
+        # Sun Belt Conference standings — enrich with records from sb_conf_records
+        rec_lookup: Dict[str, Dict[str, str]] = dict(sb_conf_records) if sb_conf_records else {}
+        # Ensure Southern Miss records from current snapshot take priority
+        usm_overall_rec = current.get("overall_record")
+        usm_conf_rec    = current.get("conf_record")
+        if usm_overall_rec or usm_conf_rec:
+            rec_lookup["southern miss"] = {
+                "overall": usm_overall_rec or rec_lookup.get("southern miss", {}).get("overall", ""),
+                "conf":    usm_conf_rec    or rec_lookup.get("southern miss", {}).get("conf", ""),
+            }
 
         try:
             sb_standings = self.get_sunbelt_standings()
@@ -1292,8 +1300,9 @@ class SouthernMissRPIBot:
             for i, s in enumerate(sb_standings):
                 rk       = s["rank"]
                 team     = s["team"]
-                rec      = s["record"] or "--"
-                conf_rec = conf_rec_lookup.get(team.lower(), "--")
+                team_recs = rec_lookup.get(team.lower(), {})
+                rec      = team_recs.get("overall") or "--"
+                conf_rec = team_recs.get("conf")    or "--"
                 pos      = i + 1
                 row_cls  = "sb-usm" if s["is_usm"] else ""
                 sb_rows += (
@@ -2355,7 +2364,7 @@ def main() -> int:
     week_review      = bot.build_week_review()
     print("Building what-if scenarios...")
     whatif_scenarios = bot.build_whatif_scenarios(current)
-    print("Collecting Sun Belt conf records...")
+    print("Collecting Sun Belt records...")
     sb_conf_records  = bot.collect_sunbelt_conf_records()
     html_content     = bot.render_html_dashboard(evidence, narrative, rank_history, week_review, whatif_scenarios, sb_conf_records)
     html_path = Path(args.html)
