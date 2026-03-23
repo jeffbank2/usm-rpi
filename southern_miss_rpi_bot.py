@@ -836,11 +836,17 @@ class SouthernMissRPIBot:
             rpi_val = extract_rpi_value(cells[2]) if len(cells) > 2 else None
 
             # Match against Sun Belt team list (flexible)
+            # Note: only allow the team-in-sb_team direction if the scraped name has
+            # 2+ words, to prevent single-word teams like "Texas" (SEC #1) from
+            # falsely matching "Texas State" (Sun Belt).
             matched = None
+            t_lower  = team.lower()
             for sb_team in self.SUN_BELT_TEAMS:
-                if sb_team.lower() in team.lower() or team.lower() in sb_team.lower():
-                    matched = sb_team
-                    break
+                s_lower = sb_team.lower()
+                if s_lower in t_lower:               # sb_team name is in scraped name
+                    matched = sb_team; break
+                if t_lower in s_lower and len(t_lower.split()) >= 2:  # multi-word scraped name only
+                    matched = sb_team; break
             if matched is None:
                 continue
 
