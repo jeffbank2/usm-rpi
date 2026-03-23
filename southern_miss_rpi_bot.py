@@ -264,7 +264,9 @@ class SouthernMissRPIBot:
     # ------------------------------------------------------------------
     @staticmethod
     def _extract_simple_value(text: str, label: str) -> Optional[str]:
-        pattern = re.escape(label) + r"\s+([^\n]+)"
+        # The negative lookahead (?!\s*/) prevents matching section headers like
+        # "Last 10 / Streaks" when we're looking for the "Last 10" stat label.
+        pattern = re.escape(label) + r"(?!\s*/)\s+([^\n]+)"
         m = re.search(pattern, text, flags=re.IGNORECASE)
         return m.group(1).strip() if m else None
 
