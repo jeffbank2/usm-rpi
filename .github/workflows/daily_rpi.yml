@@ -2,7 +2,7 @@ name: Daily RPI Update
 
 on:
   schedule:
-    - cron: '0 9 * * *'   # 4:00 AM Central (UTC-5)
+    - cron: '0 7 * * *'   # 2:00 AM Central (UTC-5)
   workflow_dispatch:
 
 jobs:

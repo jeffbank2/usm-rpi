@@ -444,8 +444,14 @@ class SouthernMissRPIBot:
         impact_text     = self.html_to_text(impact_html)
 
         games          = self._extract_game_blocks(schedule_text)
-        recent_games   = [g for g in games if g["result"] in {"W", "L"}][-7:]
+        completed      = [g for g in games if g["result"] in {"W", "L"}]
+        recent_games   = completed[-7:]
         upcoming_games = [g for g in games if g["result"] == "UPCOMING"][:5]
+
+        def _loc_record(loc_type: str) -> str:
+            w = sum(1 for g in completed if g["location_type"] == loc_type and g["result"] == "W")
+            l = sum(1 for g in completed if g["location_type"] == loc_type and g["result"] == "L")
+            return f"{w}-{l}"
 
         rpi_rank, rpi_value       = self._extract_rank_and_value(schedule_text, "RPI")
         nc_rpi_rank, nc_rpi_value = self._extract_rank_and_value(schedule_text, "Non-Conference RPI")
@@ -460,9 +466,9 @@ class SouthernMissRPIBot:
             season=self.season,
             team=team_name,
             overall_record=self._extract_simple_value(schedule_text, "Overall"),
-            home_record=self._extract_simple_value(schedule_text, "Home"),
-            road_record=self._extract_simple_value(schedule_text, "Road"),
-            neutral_record=self._extract_simple_value(schedule_text, "Neutral"),
+            home_record=_loc_record("HOME"),
+            road_record=_loc_record("AWAY"),
+            neutral_record=_loc_record("NEUTRAL"),
             conf_record=self._extract_simple_value(schedule_text, "Conf"),
             last_10=self._extract_simple_value(schedule_text, "Last 10"),
             streak=self._extract_simple_value(schedule_text, "Streak"),
@@ -691,16 +697,25 @@ class SouthernMissRPIBot:
             conn.close()
 
     def get_previous_snapshot(self) -> Optional[TeamSnapshot]:
+        """Return the most recent snapshot from a different calendar day than today.
+
+        Using OFFSET 1 would break when the bot runs multiple times on the same day
+        (it would return an earlier same-day snapshot instead of yesterday's).
+        This query explicitly excludes today's date so it always returns the most
+        recent prior-day snapshot regardless of how many runs have happened today.
+        """
+        today = dt.date.today().isoformat()
         conn = sqlite3.connect(self.db_path)
         try:
             row = conn.execute(
                 """
                 SELECT payload_json FROM snapshots
                 WHERE team = ?
+                  AND substr(captured_at, 1, 10) < ?
                 ORDER BY captured_at DESC
-                LIMIT 1 OFFSET 1
+                LIMIT 1
                 """,
-                ("Southern Miss",),
+                ("Southern Miss", today),
             ).fetchone()
             if not row:
                 return None
@@ -788,7 +803,7 @@ class SouthernMissRPIBot:
                 teams.append((int(rank), team))
 
         if not teams:
-            return ["RPI radar unavailable."]
+            return []
 
         aliases = {team_name.lower(), "southern miss", "southern mississippi", "southern miss golden eagles"}
         usm_index = None
@@ -971,8 +986,42 @@ class SouthernMissRPIBot:
             "sos_trajectory": self._sos_trajectory(current.upcoming_games),
         }
 
+        # --- Watchlist: always build regardless of prior snapshot ---
+        # Show upcoming Q1/Q2 games and any opponent inside top-50 RPI.
+        # Deduplicate by opponent so a 3-game series only appears once.
+        _seen_opps: set = set()
+        for game in current.upcoming_games:
+            opp     = game.get("opponent") or "upcoming opponent"
+            opp_rpi = game.get("opponent_rpi")
+            loc     = (game.get("location_type") or "HOME").upper()
+            bucket  = self._quadrant_bucket(loc, opp_rpi)
+            conf    = get_conference(opp)
+            conf_str = f", {conf}" if conf else ""
+            qualifies = bucket in ("Q1", "Q2") or (opp_rpi and opp_rpi <= 50)
+            if qualifies and opp not in _seen_opps:
+                _seen_opps.add(opp)
+                evidence["watchlist"].append(
+                    f"Upcoming: {opp} ({loc.lower()}, RPI {opp_rpi or 'unknown'}{conf_str}, {bucket})."
+                )
+        # Fallback: if nothing qualified (very soft schedule), show next 3 games anyway
+        if not evidence["watchlist"]:
+            _seen_opps2: set = set()
+            for game in current.upcoming_games[:5]:
+                opp     = game.get("opponent") or "upcoming opponent"
+                opp_rpi = game.get("opponent_rpi")
+                loc     = (game.get("location_type") or "HOME").lower()
+                bucket  = self._quadrant_bucket(loc.upper(), opp_rpi)
+                conf    = get_conference(opp)
+                conf_str = f", {conf}" if conf else ""
+                if opp not in _seen_opps2:
+                    _seen_opps2.add(opp)
+                    evidence["watchlist"].append(
+                        f"Upcoming: {opp} ({loc}, RPI {opp_rpi or 'unknown'}{conf_str}, {bucket})."
+                    )
+
         if previous is None:
-            evidence["drivers"].append("No prior snapshot exists yet. Today's run establishes the baseline.")
+            evidence["drivers"].append("RPI tracking is active — trend data will appear once multiple daily snapshots are collected.")
+            evidence["watchlist"] = list(dict.fromkeys(evidence["watchlist"]))
             return evidence
 
         rank_delta = self._safe_rank_delta(previous.rpi_rank, current.rpi_rank)
@@ -1026,32 +1075,6 @@ class SouthernMissRPIBot:
             if old_q and new_q and old_q != new_q:
                 evidence["drivers"].append(f"{q.upper()} record changed from {old_q} to {new_q}.")
 
-        if current.impact_notes:
-            evidence["watchlist"].extend(current.impact_notes[:3])
-
-        for game in current.upcoming_games[:3]:
-            opp = game.get("opponent")
-            if not opp:
-                raw = game.get("raw_block", "")
-                m = re.search(
-                    r"([A-Z][A-Za-z&.' -]{2,})\s*[\n\r]+\s*(?:\(?\d+-\d+\)?\s+RPI:\s+\d+|\(?\d+-\d+\)?)",
-                    raw,
-                )
-                if m:
-                    candidate = m.group(1).strip()
-                    if candidate.lower() not in {"southern miss", "golden eagles", "upcoming opponent",
-                                                  "home", "away", "neutral", "at", "vs"}:
-                        opp = candidate
-            opp      = opp or "upcoming opponent"
-            loc      = game.get("location_type", "UNKNOWN").lower()
-            opp_rpi  = game.get("opponent_rpi")
-            conf     = get_conference(opp)
-            conf_str = f", {conf}" if conf else ""
-            bucket   = self._quadrant_bucket(loc.upper(), opp_rpi)
-            evidence["watchlist"].append(
-                f"Upcoming: {opp} ({loc}, RPI {opp_rpi or 'unknown'}{conf_str}, {bucket})."
-            )
-
         evidence["drivers"]   = list(dict.fromkeys(evidence["drivers"]))
         evidence["watchlist"] = list(dict.fromkeys(evidence["watchlist"]))
         return evidence
@@ -1062,7 +1085,7 @@ class SouthernMissRPIBot:
     def build_week_review(self) -> str:
         snaps = self.get_week_snapshots()
         if len(snaps) < 2:
-            return "Not enough data for a week-in-review yet."
+            return ""
         first, last = snaps[0], snaps[-1]
         rank_delta = self._safe_rank_delta(first.rpi_rank, last.rpi_rank)
         w_delta, l_delta = self._record_delta(first.overall_record, last.overall_record)
@@ -1465,25 +1488,33 @@ class SouthernMissRPIBot:
             status_label = "Outside Host Range"
             status_icon  = "ALERT"
 
-        # Badge label is always "since yesterday"; absent if no prior-day snapshot exists
-        _has_prev = evidence.get("previous") is not None
+        # Build "since [date]" label from whichever prior snapshot was used
+        _prev_since = ""
+        _prev_data  = evidence.get("previous")
+        if _prev_data:
+            _prev_cap = (_prev_data.get("captured_at") or "")[:10]
+            try:
+                _prev_dt   = dt.date.fromisoformat(_prev_cap)
+                _prev_since = f"since {_prev_dt.strftime('%b')} {_prev_dt.day}"
+            except Exception:
+                _prev_since = "since prior snapshot"
 
-        if rank_delta is None:
-            delta_html = '<span class="delta flat">--</span>'
+        if rank_delta is None or not _prev_since:
+            delta_html = ""
         elif rank_delta > 0:
             delta_html = (
                 f'<span class="delta up">&#9650; +{rank_delta}</span>'
-                + '<span class="delta-since">since yesterday</span>'
+                f'<span class="delta-since">{_prev_since}</span>'
             )
         elif rank_delta < 0:
             delta_html = (
                 f'<span class="delta down">&#9660; {rank_delta}</span>'
-                + '<span class="delta-since">since yesterday</span>'
+                f'<span class="delta-since">{_prev_since}</span>'
             )
         else:
             delta_html = (
-                '<span class="delta flat">&#9644; no change</span>'
-                + '<span class="delta-since">since yesterday</span>'
+                f'<span class="delta flat">&#9644; no change</span>'
+                f'<span class="delta-since">{_prev_since}</span>'
             )
 
         chart_labels = json.dumps([r["date"] for r in rank_history])
@@ -1690,9 +1721,9 @@ class SouthernMissRPIBot:
                 f"</tr>"
             )
         if not hitters_rows:
-            hitters_rows = "<tr><td colspan='8' style='color:var(--text-3)'>Stats unavailable.</td></tr>"
+            hitters_rows = "<tr><td colspan='8' style='color:var(--text-3)'>Stats updating — check back shortly.</td></tr>"
         if not pitchers_rows:
-            pitchers_rows = "<tr><td colspan='8' style='color:var(--text-3)'>Stats unavailable.</td></tr>"
+            pitchers_rows = "<tr><td colspan='8' style='color:var(--text-3)'>Stats updating — check back shortly.</td></tr>"
 
         # ── template-only helpers (presentation, not data logic) ──
         _is_one = (rank == 1)
@@ -1735,8 +1766,8 @@ class SouthernMissRPIBot:
             )
         else:
             _hero_brief_html = (
-                '<div class="brief-placeholder">No brief generated yet.'
-                '<br>Run with <code>--llm</code> flag to generate today\'s brief.</div>'
+                '<div class="brief-placeholder">Southern Miss baseball RPI tracker — '
+                'updated daily during the season. Check back for analysis and trends.</div>'
             )
 
 
@@ -2508,7 +2539,7 @@ footer {{
     <div class="panel">
       <div class="panel-head"><span class="panel-title">Why It Moved</span></div>
       <div class="panel-body">
-        <ul class="ilist">{drivers_html or "<li>No drivers yet.</li>"}</ul>
+        <ul class="ilist">{drivers_html or "<li>Trend data will appear once daily snapshots are collected.</li>"}</ul>
       </div>
     </div>
 
@@ -2530,7 +2561,7 @@ footer {{
     <div class="panel">
       <div class="panel-head"><span class="panel-title">Week in Review</span></div>
       <div class="panel-body">
-        <div class="week-box">{week_html}</div>
+        <div class="week-box">{week_html or '<span style="color:var(--text-3)">7-day summary will appear once enough daily snapshots are collected.</span>'}</div>
       </div>
     </div>
 
@@ -2545,7 +2576,7 @@ footer {{
         <div class="tbl-wrap">
           <table>
             <thead><tr><th>Opponent</th><th>Site</th><th>Opp RPI</th><th>Quadrant</th><th>Time</th></tr></thead>
-            <tbody>{upcoming_rows or "<tr><td colspan='5' style='color:var(--text-3)'>No upcoming games found.</td></tr>"}</tbody>
+            <tbody>{upcoming_rows or "<tr><td colspan='5' style='color:var(--text-3)'>Schedule not yet available.</td></tr>"}</tbody>
           </table>
         </div>
       </div>
@@ -2557,7 +2588,7 @@ footer {{
         <div class="tbl-wrap">
           <table>
             <thead><tr><th>Opponent</th><th>Result</th><th>Site</th><th>Opp RPI</th></tr></thead>
-            <tbody>{recent_rows or "<tr><td colspan='4' style='color:var(--text-3)'>No recent games found.</td></tr>"}</tbody>
+            <tbody>{recent_rows or "<tr><td colspan='4' style='color:var(--text-3)'>Results will appear after the first game.</td></tr>"}</tbody>
           </table>
         </div>
       </div>
@@ -2569,7 +2600,7 @@ footer {{
   <div class="panel">
     <div class="panel-head"><span class="panel-title">Impact Games / Watchlist</span></div>
     <div class="panel-body">
-      <ul class="ilist">{watchlist_html or "<li>No items.</li>"}</ul>
+      <ul class="ilist">{watchlist_html or "<li>No high-stakes games currently scheduled.</li>"}</ul>
     </div>
   </div>
 
@@ -2838,7 +2869,7 @@ def main() -> int:
         print("Collecting Southern Miss snapshot...")
         current  = bot.collect_snapshot()
         bot.save_snapshot(current)
-        previous = bot.get_yesterday_snapshot()
+        previous = bot.get_previous_snapshot()
 
         rivals: List[Dict] = []
         if not args.no_rivals:
