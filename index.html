@@ -447,25 +447,37 @@ tbody tr:hover td { background:var(--s2); }
   display:grid; grid-template-columns:1fr auto 1fr;
   gap:10px; align-items:center;
 }
+.wi-outcomes-multi {
+  display:flex; flex-wrap:wrap; gap:8px; grid-template-columns:unset;
+}
+.wi-outcomes-multi .wi-outcome {
+  flex:1; min-width:100px;
+}
 .wi-outcome { text-align:center; padding:14px 10px; border-radius:8px; }
-.win-outcome  { background:var(--green-dim); border:1px solid rgba(0,230,118,.2); }
-.loss-outcome { background:var(--red-dim);   border:1px solid rgba(255,82,82,.2); }
+.win-outcome      { background:var(--green-dim);            border:1px solid rgba(0,230,118,.2); }
+.win-soft-outcome { background:rgba(0,230,118,.06);         border:1px solid rgba(0,230,118,.12); }
+.split-outcome    { background:rgba(245,197,24,.07);        border:1px solid rgba(245,197,24,.18); }
+.loss-soft-outcome{ background:rgba(255,82,82,.06);         border:1px solid rgba(255,82,82,.12); }
+.loss-outcome     { background:var(--red-dim);              border:1px solid rgba(255,82,82,.2); }
 .wi-label {
   font-size:0.58rem; text-transform:uppercase;
   letter-spacing:1.5px; color:var(--text-3);
   font-weight:700; margin-bottom:4px;
 }
+.wi-record { font-size:0.55rem; color:var(--text-3); letter-spacing:0; font-weight:400; text-transform:none; }
 .wi-rank {
   font-family:'Bebas Neue',sans-serif;
-  font-size:2.5rem; line-height:1; color:var(--gold);
+  font-size:2.2rem; line-height:1; color:var(--gold);
 }
-.wi-delta { font-size:0.74rem; font-weight:700; margin-top:3px; }
+.wi-delta { font-size:0.72rem; font-weight:700; margin-top:3px; }
 .wi-delta.up   { color:var(--green); }
 .wi-delta.down { color:var(--red); }
+.wi-delta.flat { color:var(--text-3); }
 .wi-vs {
   font-family:'Bebas Neue',sans-serif;
   font-size:1.1rem; color:var(--text-3); text-align:center;
 }
+.wi-matrix-table td { vertical-align:middle; line-height:1.4; }
 .wi-upset-warn {
   font-size:0.67rem; font-weight:600;
   color:var(--amber); margin-top:4px; letter-spacing:.5px;
@@ -618,7 +630,7 @@ footer {
     <div class="hero-rank">
       <div class="rank-eyebrow">RPI Rank</div>
       <div class="rank-number">#15</div>
-      <div class="rank-delta-row"><span class="delta flat">--</span></div>
+      <div class="rank-delta-row"><span class="delta down">-6</span></div>
     </div>
     <div class="hero-stats">
       <div class="hstat">
@@ -648,9 +660,9 @@ footer {
     </div>
     <div class="hero-brief">
       <div class="brief-label">AI Brief</div>
-      <div class="brief-body" id="briefBody"><div class="brief-text">Southern Miss holds steady at 15th in RPI with a 24-9 record, reflecting consistent play despite some close losses. Wins against Old Dominion and a recent home win over New Orleans reaffirm strength, while losses to mid-tier teams highlight areas to tighten. The team’s solid showing in sweep scenarios, particularly in road and neutral games, underpins stability in their position.
+      <div class="brief-body" id="briefBody"><div class="brief-text">Southern Miss slipped six spots to 15th in RPI despite three wins and two losses, including a key home victory over New Orleans. The team now stands at 24-9, bolstered by a strong 7-4 Q1 record and steady success across all quadrants. Wins over lower-ranked teams and a few recent losses tempered earlier momentum, prompting the ranking drop.
 
-The strength of schedule remains strong, ranked 13th, as Southern Miss faces a tough stretch ahead with an average opponent RPI of 35. The upcoming series at Louisiana (RPI 43) is critical, testing resilience on the road before a key neutral-site game against Ole Miss (RPI 13) that could further solidify their hosting status.</div><div class="brief-fade" id="briefFade"></div></div><button class="brief-toggle" id="briefToggle" onclick="toggleBrief()">Read More &#9660;</button>
+The strength of schedule eased four spots to 13th but will intensify with an upcoming tough stretch—average opponent RPI at 35. The series at Louisiana, a top-50 team, is critical as Southern Miss aims to secure its regional host standing.</div><div class="brief-fade" id="briefFade"></div></div><button class="brief-toggle" id="briefToggle" onclick="toggleBrief()">Read More &#9660;</button>
     </div>
   </div>
 
@@ -721,7 +733,7 @@ The strength of schedule remains strong, ranked 13th, as Southern Miss faces a t
     <div class="panel">
       <div class="panel-head"><span class="panel-title">Why It Moved</span></div>
       <div class="panel-body">
-        <ul class="ilist"><li>RPI rank did not change from the prior snapshot.</li></ul>
+        <ul class="ilist"><li>RPI rank slipped by 6 spot(s).</li><li>Win against New Orleans (home, RPI 224, Q4).</li><li>Strength of schedule worsened by 4 spot(s).</li><li>Q1 record changed from 6-3 to 7-4.</li><li>Q2 record changed from 7-1 to 6-0.</li><li>Q3 record changed from 3-1 to 5-3.</li></ul>
       </div>
     </div>
 
@@ -734,7 +746,7 @@ The strength of schedule remains strong, ranked 13th, as Southern Miss faces a t
         <div class="tbl-wrap">
           <table>
             <thead><tr><th>#</th><th>Team</th><th>Nat'l RPI</th><th>Overall</th><th>Conf</th></tr></thead>
-            <tbody><tr class=''><td>1</td><td>Coastal Carolina</td><td>#8</td><td>24-8</td><td>11-1</td></tr><tr class='sb-usm'><td>2</td><td>Southern Miss <span class='usm-tag'>YOU</span></td><td>#15</td><td>24-9</td><td>7-5</td></tr><tr class=''><td>3</td><td>Texas State</td><td>#31</td><td>23-10</td><td>8-4</td></tr><tr class=''><td>4</td><td>Louisiana</td><td>#43</td><td>19-14</td><td>4-8</td></tr><tr class=''><td>5</td><td>Arkansas State</td><td>#44</td><td>20-12</td><td>6-6</td></tr><tr class=''><td>6</td><td>South Alabama</td><td>#67</td><td>19-14</td><td>6-6</td></tr><tr class=''><td>7</td><td>Troy</td><td>#69</td><td>16-17</td><td>6-6</td></tr><tr class=''><td>8</td><td>James Madison</td><td>#91</td><td>16-15</td><td>6-6</td></tr><tr class=''><td>9</td><td>Georgia State</td><td>#121</td><td>15-19</td><td>4-8</td></tr><tr class=''><td>10</td><td>Appalachian State</td><td>#125</td><td>--</td><td>--</td></tr><tr class=''><td>11</td><td>ULM</td><td>#141</td><td>--</td><td>--</td></tr><tr class=''><td>12</td><td>Old Dominion</td><td>#143</td><td>15-17</td><td>4-8</td></tr><tr class=''><td>13</td><td>Georgia Southern</td><td>#158</td><td>11-21</td><td>4-8</td></tr><tr class=''><td>14</td><td>Marshall</td><td>#173</td><td>14-17</td><td>6-6</td></tr></tbody>
+            <tbody><tr class=''><td>1</td><td>Coastal Carolina</td><td>#8</td><td>24-8</td><td>11-1</td></tr><tr class='sb-usm'><td>2</td><td>Southern Miss <span class='usm-tag'>YOU</span></td><td>#15</td><td>24-9</td><td>7-5</td></tr><tr class=''><td>3</td><td>Texas State</td><td>#31</td><td>23-10</td><td>8-4</td></tr><tr class=''><td>4</td><td>Louisiana</td><td>#43</td><td>19-14</td><td>4-8</td></tr><tr class=''><td>5</td><td>Arkansas State</td><td>#44</td><td>20-12</td><td>6-6</td></tr><tr class=''><td>6</td><td>South Alabama</td><td>#67</td><td>19-14</td><td>6-6</td></tr><tr class=''><td>7</td><td>Troy</td><td>#69</td><td>16-17</td><td>6-6</td></tr><tr class=''><td>8</td><td>James Madison</td><td>#91</td><td>16-15</td><td>6-6</td></tr><tr class=''><td>9</td><td>Louisiana Tech</td><td>#102</td><td>18-16</td><td>6-6</td></tr><tr class=''><td>10</td><td>Georgia State</td><td>#121</td><td>15-19</td><td>4-8</td></tr><tr class=''><td>11</td><td>Appalachian State</td><td>#125</td><td>--</td><td>--</td></tr><tr class=''><td>12</td><td>ULM</td><td>#141</td><td>--</td><td>--</td></tr><tr class=''><td>13</td><td>Old Dominion</td><td>#143</td><td>15-17</td><td>4-8</td></tr><tr class=''><td>14</td><td>Georgia Southern</td><td>#158</td><td>11-21</td><td>4-8</td></tr><tr class=''><td>15</td><td>Marshall</td><td>#173</td><td>14-17</td><td>6-6</td></tr></tbody>
           </table>
         </div>
       </div>
@@ -743,7 +755,7 @@ The strength of schedule remains strong, ranked 13th, as Southern Miss faces a t
     <div class="panel">
       <div class="panel-head"><span class="panel-title">Week in Review</span></div>
       <div class="panel-body">
-        <div class="week-box">Week in Review (2026-04-02 to 2026-04-09)<br>  Rank: 16 -> 15  (+1)<br>  Record: 21-8 -> 24-9  (+3W / +1L)<br>  RPI Value: 0.6117 -> 0.6092<br>  SOS Rank: 11 -> 13</div>
+        <div class="week-box">Not enough data for a week-in-review yet.</div>
       </div>
     </div>
 
@@ -872,68 +884,40 @@ The strength of schedule remains strong, ranked 13th, as Southern Miss faces a t
   <!-- WHAT-IF (conditional full width, wraps itself in .card) -->
   
   <div class="card col-12" style="border-color:#2a2a00;">
-    <h2 style="color:#f5c518;">What-If Scenarios <span class="tip" data-tip="Directional projections of how Southern Miss RPI rank could move based on winning or losing each upcoming game or series. Not a simulation — shows relative stakes.">&#x24D8;</span></h2>
-    <div class="wi-cards-row">
-                <div class="wi-card">
+    <h2 style="color:#f5c518;">Next Series What-If <span class="tip" data-tip="Projected RPI rank impact for each possible outcome of the next series, based on current RPI. Each subsequent series shifts the baseline, so only the next series is shown.">&#x24D8;</span></h2>
+    
+                <div class="wi-card" style="max-width:100%;">
                   <div class="wi-header">
                     <span class="wi-opp">Louisiana (3-game series) <small class="conf-tag">(Sun Belt)</small></span>
                     <span class="wi-meta">Away &nbsp;|&nbsp; Opp RPI #43 &nbsp;|&nbsp; 7:00 PM</span>
                     <span class="q-badge q1">Q1</span>
                     <span class="stakes-badge" style="background:#00c85322;color:#00c853;border:1px solid #00c85344">HIGH STAKES</span>
                   </div>
-                  <p class="gpt-stake">Southern Miss must sweep Louisiana to climb to RPI #13 and avoid falling to #17 with a sweep loss.</p>
-                  <div class="wi-outcomes">
+                  <p class="gpt-stake">Southern Miss must sweep Louisiana to climb to RPI #11 and secure a stronger postseason resume.</p>
+                  <div class="wi-outcomes wi-outcomes-multi">
                     <div class="wi-outcome win-outcome">
-                      <div class="wi-label"><span class="tip" data-tip="Projected RPI rank if Southern Miss wins this game or sweeps this series.">IF WIN</span></div>
-                      <div class="wi-rank">#13</div>
-                      <div class="wi-delta up">▲ 2 spots</div>
+                      <div class="wi-label">Sweep <span class="wi-record">(3-0)</span></div>
+                      <div class="wi-rank">#11</div>
+                      <div class="wi-delta up">▲ 4 spots</div>
                     </div>
-                    <div class="wi-vs">VS</div>
-                    <div class="wi-outcome loss-outcome">
-                      <div class="wi-label"><span class="tip" data-tip="Projected RPI rank if Southern Miss loses this game or gets swept in this series.">IF LOSS</span></div>
-                      <div class="wi-rank">#17</div>
-                      <div class="wi-delta down">▼ 2 spots</div>
-                      
-                    </div>
-                  </div>
-                </div>
-                <div class="wi-card">
-                  <div class="wi-header">
-                    <span class="wi-opp">Ole Miss <small class="conf-tag">(SEC)</small></span>
-                    <span class="wi-meta">Neutral &nbsp;|&nbsp; Opp RPI #13 &nbsp;|&nbsp; 7:00 PM</span>
-                    <span class="q-badge q1">Q1</span>
-                    <span class="stakes-badge" style="background:#00c85322;color:#00c853;border:1px solid #00c85344">HIGH STAKES</span>
-                  </div>
-                  <p class="gpt-stake">A win over Ole Miss locks Southern Miss at RPI #14; a loss drops them to #16.</p>
-                  <div class="wi-outcomes">
-                    <div class="wi-outcome win-outcome">
-                      <div class="wi-label"><span class="tip" data-tip="Projected RPI rank if Southern Miss wins this game or sweeps this series.">IF WIN</span></div>
+                    <div class="wi-outcome win-soft-outcome">
+                      <div class="wi-label">Take Series <span class="wi-record">(2-1)</span></div>
                       <div class="wi-rank">#14</div>
                       <div class="wi-delta up">▲ 1 spot</div>
                     </div>
-                    <div class="wi-vs">VS</div>
-                    <div class="wi-outcome loss-outcome">
-                      <div class="wi-label"><span class="tip" data-tip="Projected RPI rank if Southern Miss loses this game or gets swept in this series.">IF LOSS</span></div>
+                    <div class="wi-outcome loss-soft-outcome">
+                      <div class="wi-label">Lose Series <span class="wi-record">(1-2)</span></div>
                       <div class="wi-rank">#16</div>
                       <div class="wi-delta down">▼ 1 spot</div>
-                      
                     </div>
-                  </div>
-                </div></div>
-    <div style="margin-top:20px;">
-      <div style="font-size:0.72rem;color:var(--text-3);text-transform:uppercase;letter-spacing:1px;margin-bottom:8px;">Full Schedule Scenario Matrix</div>
-      
-            <table>
-              <thead>
-                <tr>
-                  <th>Opponent</th><th>Site</th><th>Opp RPI</th><th>Quadrant</th>
-                  <th style="color:#00c853">If Win</th><th style="color:#ff4d4f">If Loss</th>
-                </tr>
-              </thead>
-              <tbody><tr><td>Louisiana (3-game series) <small class='conf-tag'>(Sun Belt)</small></td><td>Away</td><td>#43</td><td><span class='q-badge q1'>Q1</span></td><td class='win'>#13 (+2)</td><td class='loss'>#17 (-2)</td></tr><tr><td>Ole Miss <small class='conf-tag'>(SEC)</small></td><td>Neutral</td><td>#13</td><td><span class='q-badge q1'>Q1</span></td><td class='win'>#14 (+1)</td><td class='loss'>#16 (-1)</td></tr><tr><td>Texas State <small class='conf-tag'>(Sun Belt)</small></td><td>Home</td><td>#31</td><td><span class='q-badge q2'>Q2</span></td><td class='win'>#14 (+1)</td><td class='loss'>#16 (-1)</td></tr></tbody>
-            </table>
-    </div>
-    <p style="font-size:0.7rem;color:var(--text-3);margin-top:12px;">Projections are directional estimates based on RPI weight modeling. Not a simulation.</p>
+                    <div class="wi-outcome loss-outcome">
+                      <div class="wi-label">Swept <span class="wi-record">(0-3)</span></div>
+                      <div class="wi-rank">#18</div>
+                      <div class="wi-delta down">▼ 3 spots</div>
+                    </div></div>
+                  
+                </div>
+    <p style="font-size:0.7rem;color:var(--text-3);margin-top:14px;">Projections apply to the next series only, based on current RPI #15. Directional model — not a simulation.</p>
   </div>
 
 
@@ -1015,10 +999,10 @@ function sortStatsTable(tableId, colIdx, numeric) {
   new Chart(ctx, {
     type: 'line',
     data: {
-      labels: ["2026-03-19", "2026-03-22", "2026-03-23", "2026-03-24", "2026-03-25", "2026-03-26", "2026-03-27", "2026-03-28", "2026-03-29", "2026-03-30", "2026-03-31", "2026-04-01", "2026-04-02", "2026-04-03", "2026-04-04", "2026-04-05", "2026-04-06", "2026-04-07", "2026-04-08", "2026-04-09"],
+      labels: ["2026-03-19", "2026-03-22", "2026-03-23", "2026-03-24", "2026-03-25", "2026-03-26", "2026-03-27", "2026-03-28", "2026-03-29", "2026-03-30", "2026-03-31", "2026-04-09"],
       datasets: [{
         label: 'RPI Rank',
-        data: [1, 3, 3, 3, 3, 3, 3, 4, 8, 9, 9, 16, 16, 16, 18, 16, 16, 16, 15, 15],
+        data: [1, 3, 3, 3, 3, 3, 3, 4, 8, 9, 9, 15],
         borderColor: '#f5c518',
         borderWidth: 2.5,
         backgroundColor: grad,
