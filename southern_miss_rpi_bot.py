@@ -1226,20 +1226,52 @@ class SouthernMissRPIBot:
             conf      = get_conference(opp)
             bucket    = self._quadrant_bucket(loc, opp_rpi)
 
-            # RPI impact estimate — scale by number of games in series
+            # RPI impact estimate — per-game granular calculation for all series outcomes
             if opp_rpi and opp_rpi > 0 and current_rpi > 0:
                 opp_strength  = max(0.001, min(1.0, (150 - opp_rpi) / 150))
-                scale         = 1 + (game_count - 1) * 0.5  # series amplifies impact
-                win_rpi_gain  = WIN_MULT.get(loc, 0.65)  * opp_strength * 0.003 * scale
-                loss_rpi_drop = LOSS_MULT.get(loc, 0.75) * opp_strength * 0.003 * scale
-                win_rank_proj  = max(1, round(current_rank - win_rpi_gain  / RPI_PER_RANK))
-                loss_rank_proj = max(1, round(current_rank + loss_rpi_drop / RPI_PER_RANK))
-            else:
-                win_rank_proj  = max(1, current_rank - 1)
-                loss_rank_proj = current_rank + 2
+                per_win_gain  = WIN_MULT.get(loc, 0.65)  * opp_strength * 0.003
+                per_loss_drop = LOSS_MULT.get(loc, 0.75) * opp_strength * 0.003
 
-            win_delta  = current_rank - win_rank_proj
-            loss_delta = loss_rank_proj - current_rank
+                def _proj(wins, losses, _pwg=per_win_gain, _pld=per_loss_drop, _cr=current_rank):
+                    net = wins * _pwg - losses * _pld
+                    return max(1, round(_cr - net / RPI_PER_RANK))
+
+                if game_count == 1:
+                    raw_outcomes = [
+                        {"label": "Win",  "record": "1-0", "wins": 1, "losses": 0, "style": "win"},
+                        {"label": "Loss", "record": "0-1", "wins": 0, "losses": 1, "style": "loss"},
+                    ]
+                elif game_count == 2:
+                    raw_outcomes = [
+                        {"label": "Sweep", "record": "2-0", "wins": 2, "losses": 0, "style": "win"},
+                        {"label": "Split", "record": "1-1", "wins": 1, "losses": 1, "style": "split"},
+                        {"label": "Swept", "record": "0-2", "wins": 0, "losses": 2, "style": "loss"},
+                    ]
+                else:  # 3-game series (most common) or longer
+                    raw_outcomes = [
+                        {"label": "Sweep",       "record": f"{game_count}-0",   "wins": game_count,   "losses": 0,           "style": "win"},
+                        {"label": "Take Series", "record": f"{game_count-1}-1", "wins": game_count-1, "losses": 1,           "style": "win-soft"},
+                        {"label": "Lose Series", "record": f"1-{game_count-1}", "wins": 1,            "losses": game_count-1,"style": "loss-soft"},
+                        {"label": "Swept",       "record": f"0-{game_count}",   "wins": 0,            "losses": game_count,  "style": "loss"},
+                    ]
+
+                for o in raw_outcomes:
+                    r = _proj(o["wins"], o["losses"])
+                    o["rank"]  = r
+                    o["delta"] = current_rank - r  # positive = improved, negative = worsened
+
+                win_rank_proj  = raw_outcomes[0]["rank"]
+                loss_rank_proj = raw_outcomes[-1]["rank"]
+            else:
+                raw_outcomes = [
+                    {"label": "Win",  "record": "1-0", "wins": 1, "losses": 0, "style": "win",  "rank": max(1, current_rank - 1), "delta": 1},
+                    {"label": "Loss", "record": "0-1", "wins": 0, "losses": 1, "style": "loss", "rank": current_rank + 2,         "delta": -2},
+                ]
+                win_rank_proj  = raw_outcomes[0]["rank"]
+                loss_rank_proj = raw_outcomes[-1]["rank"]
+
+            win_delta  = raw_outcomes[0]["delta"]
+            loss_delta = -raw_outcomes[-1]["delta"]  # keep old sign: positive = rank drops
 
             # Quadrant stakes label
             if bucket == "Q1":
@@ -1296,6 +1328,7 @@ class SouthernMissRPIBot:
                 "loss_delta":   loss_delta,
                 "upset_risk":   upset_risk,
                 "gpt_stake":    gpt_stake,
+                "outcomes":     raw_outcomes,
             })
 
         return scenarios
@@ -1530,24 +1563,39 @@ class SouthernMissRPIBot:
             q_html += f'<div class="q-card"><div class="q-label"><span class="tip" data-tip="{q_tip}">{q.upper()}</span></div><div class="q-val">{val}</div></div>'
 
         # ------------------------------------------------------------------
-        # What-If Analysis HTML
+        # What-If Analysis HTML — next series only
         # ------------------------------------------------------------------
-        whatif_cards_html = ""
-        whatif_matrix_html = ""
+        whatif_card_html = ""
         if whatif_scenarios:
-            # Detail cards for first 2 games
-            for sc in whatif_scenarios[:2]:
-                opp       = sc.get("label") or sc["opponent"]
-                conf_str2 = sc["conf"]
-                conf_tag  = f' <small class="conf-tag">({conf_str2})</small>' if conf_str2 else ""
-                win_dir  = "up" if sc["win_delta"] >= 0 else "down"
-                loss_dir = "down" if sc["loss_delta"] >= 0 else "up"
-                win_arrow  = "▲" if sc["win_delta"] > 0 else ("▼" if sc["win_delta"] < 0 else "--")
-                loss_arrow = "▼" if sc["loss_delta"] > 0 else ("▲" if sc["loss_delta"] < 0 else "--")
-                gpt_txt  = sc["gpt_stake"]
-                gpt_line = f'<p class="gpt-stake">{gpt_txt}</p>' if gpt_txt else ""
-                whatif_cards_html += f"""
-                <div class="wi-card">
+            sc        = whatif_scenarios[0]
+            opp       = sc.get("label") or sc["opponent"]
+            conf_str2 = sc["conf"]
+            conf_tag  = f' <small class="conf-tag">({conf_str2})</small>' if conf_str2 else ""
+            gpt_txt   = sc["gpt_stake"]
+            gpt_line  = f'<p class="gpt-stake">{gpt_txt}</p>' if gpt_txt else ""
+
+            outcome_boxes = ""
+            for o in sc["outcomes"]:
+                d = o["delta"]
+                arrow   = "▲" if d > 0 else ("▼" if d < 0 else "—")
+                dir_cls = "up" if d > 0 else ("down" if d < 0 else "flat")
+                spots   = abs(d)
+                spot_str  = f"{spots} spot{'s' if spots != 1 else ''}"
+                delta_str = f"{arrow} {spot_str}" if d != 0 else "— no change"
+                outcome_boxes += f"""
+                    <div class="wi-outcome {o["style"]}-outcome">
+                      <div class="wi-label">{o["label"]} <span class="wi-record">({o["record"]})</span></div>
+                      <div class="wi-rank">#{o["rank"]}</div>
+                      <div class="wi-delta {dir_cls}">{delta_str}</div>
+                    </div>"""
+
+            worst = sc["outcomes"][-1]
+            upset_warn = ""
+            if worst["delta"] == 0 and sc["bucket"] in ("Q3", "Q4"):
+                upset_warn = '<div class="wi-upset-warn" style="margin-top:6px;">&#9888; Resume damage — no rank drop but committee notices losses here</div>'
+
+            whatif_card_html = f"""
+                <div class="wi-card" style="max-width:100%;">
                   <div class="wi-header">
                     <span class="wi-opp">{opp}{conf_tag}</span>
                     <span class="wi-meta">{sc["location"]} &nbsp;|&nbsp; Opp RPI #{sc["opp_rpi"] or "?"} &nbsp;|&nbsp; {sc["time"]}</span>
@@ -1555,63 +1603,17 @@ class SouthernMissRPIBot:
                     <span class="stakes-badge" style="background:{sc["stakes_color"]}22;color:{sc["stakes_color"]};border:1px solid {sc["stakes_color"]}44">{sc["stakes_level"]} STAKES</span>
                   </div>
                   {gpt_line}
-                  <div class="wi-outcomes">
-                    <div class="wi-outcome win-outcome">
-                      <div class="wi-label"><span class="tip" data-tip="Projected RPI rank if Southern Miss wins this game or sweeps this series.">IF WIN</span></div>
-                      <div class="wi-rank">#{sc["win_rank"]}</div>
-                      <div class="wi-delta {win_dir}">{win_arrow} {abs(sc["win_delta"])} spot{"s" if abs(sc["win_delta"]) != 1 else ""}</div>
-                    </div>
-                    <div class="wi-vs">VS</div>
-                    <div class="wi-outcome loss-outcome">
-                      <div class="wi-label"><span class="tip" data-tip="Projected RPI rank if Southern Miss loses this game or gets swept in this series.">IF LOSS</span></div>
-                      <div class="wi-rank">#{sc["loss_rank"]}</div>
-                      <div class="wi-delta {loss_dir}">{loss_arrow} {abs(sc["loss_delta"])} spot{"s" if abs(sc["loss_delta"]) != 1 else ""}</div>
-                      {'<div class="wi-upset-warn">&#9888; Resume damage</div>' if sc["loss_delta"] == 0 and sc["bucket"] in ("Q3","Q4") else ''}
-                    </div>
-                  </div>
+                  <div class="wi-outcomes wi-outcomes-multi">{outcome_boxes}</div>
+                  {upset_warn}
                 </div>"""
-
-            # Matrix for all games
-            matrix_rows = ""
-            cumulative_win_rank  = whatif_scenarios[0]["current_rank"] if whatif_scenarios else 0
-            cumulative_loss_rank = whatif_scenarios[0]["current_rank"] if whatif_scenarios else 0
-            for sc in whatif_scenarios:
-                cumulative_win_rank  = max(1, cumulative_win_rank  - sc["win_delta"])
-                cumulative_loss_rank = max(1, cumulative_loss_rank + sc["loss_delta"])
-                win_cls  = "win"  if sc["win_rank"]  < sc["current_rank"] else ""
-                loss_cls = "loss" if sc["loss_rank"] > sc["current_rank"] else ""
-                matrix_rows += (
-                    f"<tr>"
-                    f"<td>{sc.get('label') or sc['opponent']}" + (f" <small class='conf-tag'>({sc['conf']})</small>" if sc['conf'] else "") + "</td>"
-                    f"<td>{sc['location']}</td>"
-                    f"<td>#{sc['opp_rpi'] or '?'}</td>"
-                    f"<td><span class='q-badge {sc['bucket'].lower().replace(' ','')}'>{sc['bucket']}</span></td>"
-                    f"<td class='{win_cls}'>#{sc['win_rank']} ({'+' if sc['win_delta']>=0 else ''}{sc['win_delta']})</td>"
-                    f"<td class='{loss_cls}'>" + f"#{sc['loss_rank']} (-{sc['loss_delta']})" + (" <span class='wi-upset-tag'>resume</span>" if sc["loss_delta"] == 0 and sc["bucket"] in ("Q3","Q4") else "") + "</td>"
-                    f"</tr>"
-                )
-            whatif_matrix_html = f"""
-            <table>
-              <thead>
-                <tr>
-                  <th>Opponent</th><th>Site</th><th>Opp RPI</th><th>Quadrant</th>
-                  <th style="color:#00c853">If Win</th><th style="color:#ff4d4f">If Loss</th>
-                </tr>
-              </thead>
-              <tbody>{matrix_rows}</tbody>
-            </table>"""
 
         whatif_section = ""
         if whatif_scenarios:
             whatif_section = f'''
   <div class="card col-12" style="border-color:#2a2a00;">
-    <h2 style="color:#f5c518;">What-If Scenarios <span class="tip" data-tip="Directional projections of how Southern Miss RPI rank could move based on winning or losing each upcoming game or series. Not a simulation — shows relative stakes.">&#x24D8;</span></h2>
-    <div class="wi-cards-row">{whatif_cards_html}</div>
-    <div style="margin-top:20px;">
-      <div style="font-size:0.72rem;color:var(--text-3);text-transform:uppercase;letter-spacing:1px;margin-bottom:8px;">Full Schedule Scenario Matrix</div>
-      {whatif_matrix_html}
-    </div>
-    <p style="font-size:0.7rem;color:var(--text-3);margin-top:12px;">Projections are directional estimates based on RPI weight modeling. Not a simulation.</p>
+    <h2 style="color:#f5c518;">Next Series What-If <span class="tip" data-tip="Projected RPI rank impact for each possible outcome of the next series, based on current RPI. Each subsequent series shifts the baseline, so only the next series is shown.">&#x24D8;</span></h2>
+    {whatif_card_html}
+    <p style="font-size:0.7rem;color:var(--text-3);margin-top:14px;">Projections apply to the next series only, based on current RPI #{whatif_scenarios[0]["current_rank"]}. Directional model — not a simulation.</p>
   </div>
 '''
 
@@ -2147,25 +2149,37 @@ tbody tr:hover td {{ background:var(--s2); }}
   display:grid; grid-template-columns:1fr auto 1fr;
   gap:10px; align-items:center;
 }}
+.wi-outcomes-multi {{
+  display:flex; flex-wrap:wrap; gap:8px; grid-template-columns:unset;
+}}
+.wi-outcomes-multi .wi-outcome {{
+  flex:1; min-width:100px;
+}}
 .wi-outcome {{ text-align:center; padding:14px 10px; border-radius:8px; }}
-.win-outcome  {{ background:var(--green-dim); border:1px solid rgba(0,230,118,.2); }}
-.loss-outcome {{ background:var(--red-dim);   border:1px solid rgba(255,82,82,.2); }}
+.win-outcome      {{ background:var(--green-dim);            border:1px solid rgba(0,230,118,.2); }}
+.win-soft-outcome {{ background:rgba(0,230,118,.06);         border:1px solid rgba(0,230,118,.12); }}
+.split-outcome    {{ background:rgba(245,197,24,.07);        border:1px solid rgba(245,197,24,.18); }}
+.loss-soft-outcome{{ background:rgba(255,82,82,.06);         border:1px solid rgba(255,82,82,.12); }}
+.loss-outcome     {{ background:var(--red-dim);              border:1px solid rgba(255,82,82,.2); }}
 .wi-label {{
   font-size:0.58rem; text-transform:uppercase;
   letter-spacing:1.5px; color:var(--text-3);
   font-weight:700; margin-bottom:4px;
 }}
+.wi-record {{ font-size:0.55rem; color:var(--text-3); letter-spacing:0; font-weight:400; text-transform:none; }}
 .wi-rank {{
   font-family:'Bebas Neue',sans-serif;
-  font-size:2.5rem; line-height:1; color:var(--gold);
+  font-size:2.2rem; line-height:1; color:var(--gold);
 }}
-.wi-delta {{ font-size:0.74rem; font-weight:700; margin-top:3px; }}
+.wi-delta {{ font-size:0.72rem; font-weight:700; margin-top:3px; }}
 .wi-delta.up   {{ color:var(--green); }}
 .wi-delta.down {{ color:var(--red); }}
+.wi-delta.flat {{ color:var(--text-3); }}
 .wi-vs {{
   font-family:'Bebas Neue',sans-serif;
   font-size:1.1rem; color:var(--text-3); text-align:center;
 }}
+.wi-matrix-table td {{ vertical-align:middle; line-height:1.4; }}
 .wi-upset-warn {{
   font-size:0.67rem; font-weight:600;
   color:var(--amber); margin-top:4px; letter-spacing:.5px;
