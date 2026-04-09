@@ -161,6 +161,12 @@ body {
 .delta.up   { background:var(--green-dim); color:var(--green); }
 .delta.down { background:var(--red-dim);   color:var(--red); }
 .delta.flat { background:var(--s3);        color:var(--text-3); }
+.delta-since {
+  display:inline-block;
+  font-size:0.65rem; font-weight:500; color:var(--text-3);
+  padding:3px 8px; border-radius:50px;
+  background:var(--s3); letter-spacing:.3px;
+}
 
 /* hero stat tiles */
 .hero-stats {
@@ -416,6 +422,14 @@ tbody tr:hover td { background:var(--s2); }
   font-family:'JetBrains Mono',monospace;
   font-size:0.74rem; color:#c0c0c0; line-height:2.0;
 }
+.week-date-hdr {
+  font-family:'Inter',sans-serif;
+  font-size:0.68rem; font-weight:700; letter-spacing:1.5px;
+  text-transform:uppercase; color:var(--gold);
+  margin-bottom:10px;
+  padding-bottom:8px;
+  border-bottom:1px solid rgba(245,197,24,.2);
+}
 
 /* ── WHAT-IF (classes used by Python-generated whatif_section) ── */
 .wi-cards-row {
@@ -486,6 +500,27 @@ tbody tr:hover td { background:var(--s2); }
   font-size:0.6rem; font-weight:600; color:var(--amber);
   border:1px solid rgba(255,171,64,.3); background:var(--amber-dim);
   padding:1px 5px; border-radius:3px; margin-left:4px;
+}
+
+/* ── SEASON STATS DIVIDER ── */
+.stats-divider {
+  display:flex; align-items:center; gap:18px;
+  margin:32px 0 24px;
+}
+.stats-divider-line {
+  flex:1; height:1px;
+  background:linear-gradient(90deg, transparent, rgba(245,197,24,.35), transparent);
+}
+.stats-divider-label {
+  font-family:'Bebas Neue',sans-serif;
+  font-size:1.35rem; letter-spacing:4px;
+  color:var(--gold);
+  white-space:nowrap;
+  text-shadow:0 0 20px rgba(245,197,24,.3);
+  padding:6px 20px;
+  border:1px solid rgba(245,197,24,.25);
+  border-radius:6px;
+  background:rgba(245,197,24,.05);
 }
 
 /* ── TOOLTIPS ── */
@@ -630,7 +665,7 @@ footer {
     <div class="hero-rank">
       <div class="rank-eyebrow">RPI Rank</div>
       <div class="rank-number">#15</div>
-      <div class="rank-delta-row"><span class="delta down">-6</span></div>
+      <div class="rank-delta-row"><span class="delta flat">--</span></div>
     </div>
     <div class="hero-stats">
       <div class="hstat">
@@ -731,7 +766,7 @@ footer {
     <div class="panel">
       <div class="panel-head"><span class="panel-title">Why It Moved</span></div>
       <div class="panel-body">
-        <ul class="ilist"><li>RPI rank slipped by 6 spot(s).</li><li>Win against New Orleans (home, RPI 224, Q4).</li><li>Strength of schedule worsened by 4 spot(s).</li><li>Q1 record changed from 6-3 to 7-4.</li><li>Q2 record changed from 7-1 to 6-0.</li><li>Q3 record changed from 3-1 to 5-3.</li></ul>
+        <ul class="ilist"><li>No prior snapshot exists yet. Today's run establishes the baseline.</li></ul>
       </div>
     </div>
 
@@ -792,8 +827,55 @@ footer {
   <div class="panel">
     <div class="panel-head"><span class="panel-title">Impact Games / Watchlist</span></div>
     <div class="panel-body">
-      <ul class="ilist"><li>Impact page includes direct games against Southern Miss and indirect games involving prior opponents.</li><li>Upcoming: Louisiana (away, RPI 43, Sun Belt, Q1).</li></ul>
+      <ul class="ilist"><li>No items.</li></ul>
     </div>
+  </div>
+
+  <!-- WHAT-IF (conditional full width, wraps itself in .card) -->
+  
+  <div class="card col-12" style="border-color:#2a2a00;">
+    <h2 style="color:#f5c518;">Next Series What-If <span class="tip" data-tip="Projected RPI rank impact for each possible outcome of the next series, based on current RPI. Each subsequent series shifts the baseline, so only the next series is shown.">&#x24D8;</span></h2>
+    
+                <div class="wi-card" style="max-width:100%;">
+                  <div class="wi-header">
+                    <span class="wi-opp">Louisiana (3-game series) <small class="conf-tag">(Sun Belt)</small></span>
+                    <span class="wi-meta">Away &nbsp;|&nbsp; Opp RPI #43 &nbsp;|&nbsp; 7:00 PM</span>
+                    <span class="q-badge q1">Q1</span>
+                    <span class="stakes-badge" style="background:#00c85322;color:#00c853;border:1px solid #00c85344">HIGH STAKES</span>
+                  </div>
+                  <p class="gpt-stake">Southern Miss must sweep Louisiana to crack RPI top 11; falling short drops them to #18.</p>
+                  <div class="wi-outcomes wi-outcomes-multi">
+                    <div class="wi-outcome win-outcome">
+                      <div class="wi-label">Sweep <span class="wi-record">(3-0)</span></div>
+                      <div class="wi-rank">#11</div>
+                      <div class="wi-delta up">▲ 4 spots</div>
+                    </div>
+                    <div class="wi-outcome win-soft-outcome">
+                      <div class="wi-label">Take Series <span class="wi-record">(2-1)</span></div>
+                      <div class="wi-rank">#14</div>
+                      <div class="wi-delta up">▲ 1 spot</div>
+                    </div>
+                    <div class="wi-outcome loss-soft-outcome">
+                      <div class="wi-label">Lose Series <span class="wi-record">(1-2)</span></div>
+                      <div class="wi-rank">#16</div>
+                      <div class="wi-delta down">▼ 1 spot</div>
+                    </div>
+                    <div class="wi-outcome loss-outcome">
+                      <div class="wi-label">Swept <span class="wi-record">(0-3)</span></div>
+                      <div class="wi-rank">#18</div>
+                      <div class="wi-delta down">▼ 3 spots</div>
+                    </div></div>
+                  
+                </div>
+    <p style="font-size:0.7rem;color:var(--text-3);margin-top:14px;">Projections apply to the next series only, based on current RPI #15. Directional model — not a simulation.</p>
+  </div>
+
+
+  <!-- ═══════════════════ SEASON STATS DIVIDER ═══════════════════ -->
+  <div class="stats-divider">
+    <div class="stats-divider-line"></div>
+    <div class="stats-divider-label">2026 Season Stats</div>
+    <div class="stats-divider-line"></div>
   </div>
 
   <!-- PLAYER STATS -->
@@ -878,46 +960,6 @@ footer {
       </div>
     </div>
   </div>
-
-  <!-- WHAT-IF (conditional full width, wraps itself in .card) -->
-  
-  <div class="card col-12" style="border-color:#2a2a00;">
-    <h2 style="color:#f5c518;">Next Series What-If <span class="tip" data-tip="Projected RPI rank impact for each possible outcome of the next series, based on current RPI. Each subsequent series shifts the baseline, so only the next series is shown.">&#x24D8;</span></h2>
-    
-                <div class="wi-card" style="max-width:100%;">
-                  <div class="wi-header">
-                    <span class="wi-opp">Louisiana (3-game series) <small class="conf-tag">(Sun Belt)</small></span>
-                    <span class="wi-meta">Away &nbsp;|&nbsp; Opp RPI #43 &nbsp;|&nbsp; 7:00 PM</span>
-                    <span class="q-badge q1">Q1</span>
-                    <span class="stakes-badge" style="background:#00c85322;color:#00c853;border:1px solid #00c85344">HIGH STAKES</span>
-                  </div>
-                  <p class="gpt-stake">Southern Miss must sweep Louisiana to crack the RPI top 15 and secure stronger NCAA tournament positioning.</p>
-                  <div class="wi-outcomes wi-outcomes-multi">
-                    <div class="wi-outcome win-outcome">
-                      <div class="wi-label">Sweep <span class="wi-record">(3-0)</span></div>
-                      <div class="wi-rank">#11</div>
-                      <div class="wi-delta up">▲ 4 spots</div>
-                    </div>
-                    <div class="wi-outcome win-soft-outcome">
-                      <div class="wi-label">Take Series <span class="wi-record">(2-1)</span></div>
-                      <div class="wi-rank">#14</div>
-                      <div class="wi-delta up">▲ 1 spot</div>
-                    </div>
-                    <div class="wi-outcome loss-soft-outcome">
-                      <div class="wi-label">Lose Series <span class="wi-record">(1-2)</span></div>
-                      <div class="wi-rank">#16</div>
-                      <div class="wi-delta down">▼ 1 spot</div>
-                    </div>
-                    <div class="wi-outcome loss-outcome">
-                      <div class="wi-label">Swept <span class="wi-record">(0-3)</span></div>
-                      <div class="wi-rank">#18</div>
-                      <div class="wi-delta down">▼ 3 spots</div>
-                    </div></div>
-                  
-                </div>
-    <p style="font-size:0.7rem;color:var(--text-3);margin-top:14px;">Projections apply to the next series only, based on current RPI #15. Directional model — not a simulation.</p>
-  </div>
-
 
 </main>
 

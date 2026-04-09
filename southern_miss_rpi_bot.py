@@ -708,6 +708,26 @@ class SouthernMissRPIBot:
         finally:
             conn.close()
 
+    def get_yesterday_snapshot(self) -> Optional[TeamSnapshot]:
+        """Return the most recent snapshot captured on the previous calendar day, or None."""
+        yesterday = (dt.date.today() - dt.timedelta(days=1)).isoformat()
+        conn = sqlite3.connect(self.db_path)
+        try:
+            row = conn.execute(
+                """
+                SELECT payload_json FROM snapshots
+                WHERE team = ? AND substr(captured_at, 1, 10) = ?
+                ORDER BY captured_at DESC
+                LIMIT 1
+                """,
+                ("Southern Miss", yesterday),
+            ).fetchone()
+            if not row:
+                return None
+            return TeamSnapshot(**json.loads(row[0]))
+        finally:
+            conn.close()
+
     def get_rank_history(self, days: int = 45) -> List[Dict[str, Any]]:
         conn = sqlite3.connect(self.db_path)
         try:
@@ -1445,14 +1465,26 @@ class SouthernMissRPIBot:
             status_label = "Outside Host Range"
             status_icon  = "ALERT"
 
+        # Badge label is always "since yesterday"; absent if no prior-day snapshot exists
+        _has_prev = evidence.get("previous") is not None
+
         if rank_delta is None:
-            delta_html = ""
-        elif rank_delta > 0:
-            delta_html = f'<span class="delta up">+{rank_delta}</span>'
-        elif rank_delta < 0:
-            delta_html = f'<span class="delta down">{rank_delta}</span>'
-        else:
             delta_html = '<span class="delta flat">--</span>'
+        elif rank_delta > 0:
+            delta_html = (
+                f'<span class="delta up">&#9650; +{rank_delta}</span>'
+                + '<span class="delta-since">since yesterday</span>'
+            )
+        elif rank_delta < 0:
+            delta_html = (
+                f'<span class="delta down">&#9660; {rank_delta}</span>'
+                + '<span class="delta-since">since yesterday</span>'
+            )
+        else:
+            delta_html = (
+                '<span class="delta flat">&#9644; no change</span>'
+                + '<span class="delta-since">since yesterday</span>'
+            )
 
         chart_labels = json.dumps([r["date"] for r in rank_history])
         chart_data   = json.dumps([r["rpi_rank"] for r in rank_history])
@@ -1553,7 +1585,15 @@ class SouthernMissRPIBot:
                 "</div>"
             )
 
-        week_html = week_review.replace("\n", "<br>")
+        # Render week review: first line (date range header) styled separately
+        _week_lines = week_review.split("\n", 1)
+        if len(_week_lines) == 2:
+            week_html = (
+                f'<div class="week-date-hdr">{_week_lines[0]}</div>'
+                + _week_lines[1].replace("\n", "<br>")
+            )
+        else:
+            week_html = week_review.replace("\n", "<br>")
         sos_traj  = evidence.get("sos_trajectory", "")
 
         q_html = ""
@@ -1863,6 +1903,12 @@ body {{
 .delta.up   {{ background:var(--green-dim); color:var(--green); }}
 .delta.down {{ background:var(--red-dim);   color:var(--red); }}
 .delta.flat {{ background:var(--s3);        color:var(--text-3); }}
+.delta-since {{
+  display:inline-block;
+  font-size:0.65rem; font-weight:500; color:var(--text-3);
+  padding:3px 8px; border-radius:50px;
+  background:var(--s3); letter-spacing:.3px;
+}}
 
 /* hero stat tiles */
 .hero-stats {{
@@ -2118,6 +2164,14 @@ tbody tr:hover td {{ background:var(--s2); }}
   font-family:'JetBrains Mono',monospace;
   font-size:0.74rem; color:#c0c0c0; line-height:2.0;
 }}
+.week-date-hdr {{
+  font-family:'Inter',sans-serif;
+  font-size:0.68rem; font-weight:700; letter-spacing:1.5px;
+  text-transform:uppercase; color:var(--gold);
+  margin-bottom:10px;
+  padding-bottom:8px;
+  border-bottom:1px solid rgba(245,197,24,.2);
+}}
 
 /* ── WHAT-IF (classes used by Python-generated whatif_section) ── */
 .wi-cards-row {{
@@ -2188,6 +2242,27 @@ tbody tr:hover td {{ background:var(--s2); }}
   font-size:0.6rem; font-weight:600; color:var(--amber);
   border:1px solid rgba(255,171,64,.3); background:var(--amber-dim);
   padding:1px 5px; border-radius:3px; margin-left:4px;
+}}
+
+/* ── SEASON STATS DIVIDER ── */
+.stats-divider {{
+  display:flex; align-items:center; gap:18px;
+  margin:32px 0 24px;
+}}
+.stats-divider-line {{
+  flex:1; height:1px;
+  background:linear-gradient(90deg, transparent, rgba(245,197,24,.35), transparent);
+}}
+.stats-divider-label {{
+  font-family:'Bebas Neue',sans-serif;
+  font-size:1.35rem; letter-spacing:4px;
+  color:var(--gold);
+  white-space:nowrap;
+  text-shadow:0 0 20px rgba(245,197,24,.3);
+  padding:6px 20px;
+  border:1px solid rgba(245,197,24,.25);
+  border-radius:6px;
+  background:rgba(245,197,24,.05);
 }}
 
 /* ── TOOLTIPS ── */
@@ -2498,6 +2573,16 @@ footer {{
     </div>
   </div>
 
+  <!-- WHAT-IF (conditional full width, wraps itself in .card) -->
+  {whatif_section}
+
+  <!-- ═══════════════════ SEASON STATS DIVIDER ═══════════════════ -->
+  <div class="stats-divider">
+    <div class="stats-divider-line"></div>
+    <div class="stats-divider-label">2026 Season Stats</div>
+    <div class="stats-divider-line"></div>
+  </div>
+
   <!-- PLAYER STATS -->
   <div class="row row-2">
 
@@ -2580,9 +2665,6 @@ footer {{
       </div>
     </div>
   </div>
-
-  <!-- WHAT-IF (conditional full width, wraps itself in .card) -->
-  {whatif_section}
 
 </main>
 
@@ -2756,7 +2838,7 @@ def main() -> int:
         print("Collecting Southern Miss snapshot...")
         current  = bot.collect_snapshot()
         bot.save_snapshot(current)
-        previous = bot.get_previous_snapshot()
+        previous = bot.get_yesterday_snapshot()
 
         rivals: List[Dict] = []
         if not args.no_rivals:
