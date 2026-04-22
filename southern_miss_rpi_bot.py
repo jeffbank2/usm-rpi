@@ -306,7 +306,7 @@ class SouthernMissRPIBot:
             if not val:
                 return None
             val = val.strip()
-            val = re.sub(r"^[@vVsS. ]+", "", val).strip()
+            val = re.sub(r"^(?:vs?\.?\s+|@\s*)", "", val, flags=re.IGNORECASE).strip()
             val = re.sub(r"\s+", " ", val)
             if not val:
                 return None
