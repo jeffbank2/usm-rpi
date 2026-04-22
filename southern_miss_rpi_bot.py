@@ -53,6 +53,8 @@ PLAYER_STATS_PDF_URL = (
     "https://s3.us-east-2.amazonaws.com/sidearm.nextgen.sites/"
     f"southernmiss.com/stats/baseball/{_SEASON_YEAR}/pdf/cume.pdf"
 )
+SIDEARM_BASE         = "https://southernmiss.com"
+SIDEARM_SCHEDULE_URL = f"{SIDEARM_BASE}/sports/baseball/schedule/{_SEASON_YEAR}"
 
 USER_AGENT = (
     "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) "
@@ -664,6 +666,178 @@ class SouthernMissRPIBot:
             return f"{(int(h) + int(bb)) / innings:.2f}"
         except Exception:
             return "--"
+
+    # ------------------------------------------------------------------
+    # Last game box score
+    # ------------------------------------------------------------------
+    def fetch_last_boxscore(self) -> Optional[Dict[str, Any]]:
+        """Scrape the most recently completed game box score from southernmiss.com.
+
+        Returns a dict with:
+          date, opponent, usm_name, usm_score, opp_score, result,
+          line_score  (list of {team, innings[], r, h, e}),
+          usm_batters (list of {name, pos, ab, r, h, rbi}),
+          url
+        """
+        try:
+            # ── 1. Find all completed boxscore links on the schedule page ──
+            sched_html = self.fetch_text(SIDEARM_SCHEDULE_URL)
+            sched_soup = BeautifulSoup(sched_html, "html.parser")
+            links = sched_soup.find_all(
+                "a", href=re.compile(r"/stats/\d+/.+/boxscore/\d+")
+            )
+            if not links:
+                self._log("No boxscore links found on schedule page")
+                return None
+
+            last_href = links[-1]["href"]
+            game_url  = f"{SIDEARM_BASE}{last_href}"
+
+            m = re.search(r"/stats/\d+/([^/]+)/boxscore/", last_href)
+            opp_slug    = m.group(1) if m else "opponent"
+            opp_display = opp_slug.replace("-", " ").title()
+
+            # ── 2. Fetch box score page ──
+            bs_html = self.fetch_text(game_url)
+            bs_soup = BeautifulSoup(bs_html, "html.parser")
+
+            # ── 3. Classify tables ──
+            line_score_table: Optional[Any] = None
+            batting_tables:   List[Any]     = []
+
+            for tbl in bs_soup.find_all("table"):
+                tbody = tbl.find("tbody")
+                if tbody:
+                    data_rows = [r for r in tbody.find_all("tr") if r.find_all("td")]
+                    if len(data_rows) >= 2:
+                        first_cells = data_rows[0].find_all("td")
+                        # Line score rows: team-name cell + 9+ inning cells + R H E
+                        # (no colspan on the first cell, 12+ total cells)
+                        if (
+                            len(first_cells) >= 12
+                            and not first_cells[0].get("colspan")
+                            and line_score_table is None
+                        ):
+                            line_score_table = tbl
+                            continue
+
+                # Batting tables: check only thead for AB + RBI columns.
+                # (Body rows use <th> for player names, so tbl.find_all("th") would
+                # include player names — use thead only for classification.)
+                thead = tbl.find("thead")
+                if thead:
+                    head_text = " ".join(
+                        th.get_text(strip=True).upper()
+                        for th in thead.find_all("th")
+                    )
+                    if "AB" in head_text and "RBI" in head_text:
+                        batting_tables.append(tbl)
+
+            # ── 4. Parse line score ──
+            line_score: List[Dict[str, Any]] = []
+            if line_score_table:
+                tbody = line_score_table.find("tbody")
+                if tbody:
+                    for row in tbody.find_all("tr"):
+                        # Line score rows use only <td>; no player-name <th> here
+                        cells = [td.get_text(strip=True) for td in row.find_all("td")]
+                        if len(cells) < 12:
+                            continue
+                        line_score.append({
+                            "team":    cells[0],
+                            "innings": cells[1:-3],
+                            "r":       cells[-3],
+                            "h":       cells[-2],
+                            "e":       cells[-1],
+                        })
+
+            # ── 5. Identify USM row ──
+            usm_r = opp_r = 0
+            usm_team_name = "Southern Miss"
+            opp_team_name = opp_display
+            usm_line_idx  = 0   # which batting table belongs to USM
+
+            for i, row in enumerate(line_score):
+                if "southern miss" in row["team"].lower() or "usm" in row["team"].lower():
+                    usm_r         = int(row["r"]) if row["r"].isdigit() else 0
+                    usm_team_name = row["team"]
+                    usm_line_idx  = i
+                else:
+                    opp_r         = int(row["r"]) if row["r"].isdigit() else 0
+                    opp_team_name = row["team"]
+
+            result = "W" if usm_r > opp_r else ("L" if opp_r > usm_r else "T")
+
+            # ── 6. Parse USM batting ──
+            # Sidearm puts player names in <th> within each body row; use
+            # find_all(["td","th"]) for cells and thead-only for headers.
+            usm_batters: List[Dict[str, str]] = []
+            if batting_tables and usm_line_idx < len(batting_tables):
+                bt = batting_tables[usm_line_idx]
+
+                # Build column index map from thead only
+                bt_thead = bt.find("thead")
+                head_ths = bt_thead.find_all("th") if bt_thead else []
+                hdrs = [th.get_text(strip=True).upper() for th in head_ths]
+                col: Dict[str, int] = {name: i for i, name in enumerate(hdrs) if name}
+
+                tbody = bt.find("tbody") or bt
+                for row in tbody.find_all("tr"):
+                    # Each body row: player name in <th>, stats in <td>
+                    cells = [c.get_text(strip=True) for c in row.find_all(["td", "th"])]
+                    if len(cells) < 3:
+                        continue
+
+                    def _c(key: str, default: str = "0") -> str:
+                        idx = col.get(key)
+                        if idx is not None and idx < len(cells):
+                            return cells[idx] or default
+                        return default
+
+                    name_raw = _c("PLAYER", cells[0])
+                    if not name_raw or "total" in name_raw.lower():
+                        continue
+                    # Skip pitchers who didn't bat (AB=0, all zeros)
+                    ab_val = _c("AB", "0")
+                    if ab_val == "0" and _c("BB", "0") == "0":
+                        continue
+
+                    usm_batters.append({
+                        "name": self._fmt_name(name_raw),
+                        "pos":  _c("POS", ""),
+                        "ab":   ab_val,
+                        "r":    _c("R"),
+                        "h":    _c("H"),
+                        "rbi":  _c("RBI"),
+                    })
+
+            # ── 7. Extract game date from page title (e.g. "... on 04/21/2026 ...") ──
+            date_text = ""
+            title_tag = bs_soup.find("title")
+            title_str = title_tag.get_text(strip=True) if title_tag else ""
+            dm = re.search(r"on\s+(\d{2}/\d{2}/\d{4})", title_str, re.I)
+            if dm:
+                try:
+                    _d = dt.datetime.strptime(dm.group(1), "%m/%d/%Y")
+                    date_text = f"{_d.strftime('%B')} {_d.day}, {_d.year}"
+                except ValueError:
+                    date_text = dm.group(1)
+
+            return {
+                "date":       date_text,
+                "opponent":   opp_team_name,
+                "usm_name":   usm_team_name,
+                "usm_score":  usm_r,
+                "opp_score":  opp_r,
+                "result":     result,
+                "line_score": line_score,
+                "usm_batters": usm_batters,
+                "url":        game_url,
+            }
+
+        except Exception as exc:
+            self._log(f"Box score fetch error: {exc}")
+            return None
 
     def save_snapshot(self, snapshot: TeamSnapshot) -> None:
         conn = sqlite3.connect(self.db_path)
@@ -1462,6 +1636,7 @@ class SouthernMissRPIBot:
         whatif_scenarios: Optional[List[Dict]] = None,
         sb_conf_records: Optional[Dict[str, str]] = None,
         player_stats: Optional[Dict[str, Any]] = None,
+        last_boxscore: Optional[Dict[str, Any]] = None,
     ) -> str:
         current  = evidence["current"]
         rank     = current.get("rpi_rank") or 0
@@ -1770,6 +1945,113 @@ class SouthernMissRPIBot:
                 'updated daily during the season. Check back for analysis and trends.</div>'
             )
 
+        # ── Box score HTML ──
+        bs = last_boxscore or {}
+        boxscore_html = ""
+        if bs and bs.get("line_score"):
+            ls = bs["line_score"]
+            # determine max inning count across both rows
+            max_inn = max((len(row["innings"]) for row in ls), default=9)
+            inn_headers = "".join(f"<th>{i+1}</th>" for i in range(max_inn))
+
+            ls_rows = ""
+            for row in ls:
+                is_usm = "southern miss" in row["team"].lower()
+                row_cls = "bs-usm-row" if is_usm else ""
+                inn_cells = ""
+                for j in range(max_inn):
+                    val = row["innings"][j] if j < len(row["innings"]) else "&mdash;"
+                    inn_cells += f"<td>{val}</td>"
+                ls_rows += (
+                    f"<tr class='{row_cls}'>"
+                    f"<td class='bs-team'>{row['team']}</td>"
+                    f"{inn_cells}"
+                    f"<td class='bs-rhe'>{row['r']}</td>"
+                    f"<td class='bs-rhe'>{row['h']}</td>"
+                    f"<td class='bs-rhe'>{row['e']}</td>"
+                    f"</tr>"
+                )
+
+            # USM batting rows
+            usm_batters = bs.get("usm_batters", [])
+            bat_rows = ""
+            for b in usm_batters:
+                bat_rows += (
+                    f"<tr>"
+                    f"<td class='bs-player'>{b['name']}</td>"
+                    f"<td class='bs-pos'>{b.get('pos','')}</td>"
+                    f"<td class='bs-num'>{b.get('ab','')}</td>"
+                    f"<td class='bs-num'>{b.get('r','')}</td>"
+                    f"<td class='bs-num'>{b.get('h','')}</td>"
+                    f"<td class='bs-num'>{b.get('rbi','')}</td>"
+                    f"</tr>"
+                )
+            if not bat_rows:
+                bat_rows = "<tr><td colspan='6' style='color:var(--text-3)'>Batting data unavailable.</td></tr>"
+
+            res       = bs.get("result", "")
+            res_cls   = "bs-res-w" if res == "W" else ("bs-res-l" if res == "L" else "bs-res-t")
+            res_label = {"W": "WIN", "L": "LOSS", "T": "TIE"}.get(res, res)
+            usm_sc    = bs.get("usm_score", 0)
+            opp_sc    = bs.get("opp_score", 0)
+            opp_name  = bs.get("opponent", "Opponent")
+            date_lbl  = bs.get("date", "")
+            bs_url    = bs.get("url", "#")
+
+            score_line = (
+                f"Southern Miss {usm_sc}, {opp_name} {opp_sc}"
+                if res == "W"
+                else f"{opp_name} {opp_sc}, Southern Miss {usm_sc}"
+                if res == "L"
+                else f"Southern Miss {usm_sc}, {opp_name} {opp_sc}"
+            )
+
+            boxscore_html = f"""
+  <!-- ═══════════════════ LAST GAME BOX SCORE ═══════════════════ -->
+  <div class="stats-divider">
+    <div class="stats-divider-line"></div>
+    <div class="stats-divider-label">Last Game</div>
+    <div class="stats-divider-line"></div>
+  </div>
+
+  <div class="panel bs-panel">
+    <div class="panel-head bs-panel-head">
+      <span class="panel-title">{score_line}</span>
+      <span class="bs-result-badge {res_cls}">{res_label}</span>
+      <span class="bs-date">{date_lbl}</span>
+      <a class="bs-link" href="{bs_url}" target="_blank" rel="noopener">Full Box Score &#8599;</a>
+    </div>
+    <div class="panel-body">
+
+      <!-- Line score -->
+      <div class="tbl-wrap bs-linescore-wrap">
+        <table class="bs-linescore">
+          <thead><tr>
+            <th class="bs-team-th"></th>
+            {inn_headers}
+            <th class="bs-rhe-th">R</th>
+            <th class="bs-rhe-th">H</th>
+            <th class="bs-rhe-th">E</th>
+          </tr></thead>
+          <tbody>{ls_rows}</tbody>
+        </table>
+      </div>
+
+      <!-- USM batting -->
+      <div class="bs-bat-label">Southern Miss Batting</div>
+      <div class="tbl-wrap">
+        <table class="bs-batting">
+          <thead><tr>
+            <th>Player</th><th>Pos</th>
+            <th>AB</th><th>R</th><th>H</th><th>RBI</th>
+          </tr></thead>
+          <tbody>{bat_rows}</tbody>
+        </table>
+      </div>
+
+    </div>
+  </div>
+"""
 
         return f"""<!DOCTYPE html>
 <html lang="en">
@@ -2355,6 +2637,67 @@ footer {{
   border-top:1px solid var(--border-sub);
 }}
 
+/* ── BOX SCORE ── */
+.bs-panel {{ border-color:var(--border); }}
+.bs-panel-head {{
+  display:flex; align-items:center; gap:10px; flex-wrap:wrap;
+}}
+.bs-result-badge {{
+  font-family:'Bebas Neue',sans-serif;
+  font-size:0.75rem; letter-spacing:1.5px;
+  padding:3px 12px; border-radius:50px;
+}}
+.bs-res-w {{ background:var(--green-dim); color:var(--green); border:1px solid rgba(0,230,118,.25); }}
+.bs-res-l {{ background:var(--red-dim);   color:var(--red);   border:1px solid rgba(255,82,82,.25); }}
+.bs-res-t {{ background:var(--s3);        color:var(--text-3); }}
+.bs-date  {{ font-size:0.72rem; color:var(--text-3); margin-left:auto; }}
+.bs-link  {{
+  font-size:0.72rem; color:var(--gold);
+  text-decoration:none; white-space:nowrap;
+}}
+.bs-link:hover {{ text-decoration:underline; }}
+.bs-linescore-wrap {{ margin-bottom:18px; }}
+.bs-linescore {{
+  border-collapse:collapse; width:100%;
+}}
+.bs-linescore th, .bs-linescore td {{
+  text-align:center; padding:6px 8px;
+  border:1px solid var(--border-sub);
+  font-family:'JetBrains Mono',monospace; font-size:0.8rem;
+}}
+.bs-linescore th {{
+  background:var(--s3); color:var(--text-3);
+  font-size:0.72rem; letter-spacing:.5px; text-transform:uppercase;
+}}
+.bs-team-th {{ text-align:left !important; min-width:120px; }}
+.bs-rhe-th  {{ background:var(--s4) !important; color:var(--text-2) !important; font-weight:700; }}
+.bs-team    {{ text-align:left; color:var(--text-2); font-family:'Inter',sans-serif; white-space:nowrap; }}
+.bs-rhe     {{ background:var(--s2); font-weight:700; color:var(--text); }}
+.bs-usm-row .bs-team  {{ color:var(--gold); font-weight:600; }}
+.bs-usm-row .bs-rhe   {{ color:var(--gold); background:rgba(245,197,24,.06); }}
+.bs-usm-row td        {{ background:rgba(245,197,24,.03); }}
+.bs-bat-label {{
+  font-size:0.68rem; font-weight:700; color:var(--text-3);
+  text-transform:uppercase; letter-spacing:2px;
+  margin-bottom:8px; padding-bottom:6px;
+  border-bottom:1px solid var(--border-sub);
+}}
+.bs-batting {{ border-collapse:collapse; width:100%; }}
+.bs-batting th, .bs-batting td {{
+  padding:6px 10px; border-bottom:1px solid var(--border-sub);
+}}
+.bs-batting th {{
+  background:var(--s3); color:var(--text-3);
+  font-size:0.68rem; text-transform:uppercase; letter-spacing:1px;
+  text-align:left;
+}}
+.bs-batting th:not(.bs-player-th):not(:first-child) {{ text-align:right; }}
+.bs-player {{ color:var(--text); font-size:0.82rem; white-space:nowrap; }}
+.bs-pos    {{ color:var(--text-3); font-size:0.75rem; }}
+.bs-num    {{ font-family:'JetBrains Mono',monospace; font-size:0.8rem; text-align:right; color:var(--text-2); }}
+.bs-batting tr:last-child td {{ border-bottom:none; }}
+.bs-batting tr:hover td {{ background:var(--s3); }}
+
 /* ── INFO BANNER ── */
 .info-banner {{
   background:linear-gradient(135deg,#0d0900 0%,var(--s1) 60%);
@@ -2606,6 +2949,8 @@ footer {{
 
   <!-- WHAT-IF (conditional full width, wraps itself in .card) -->
   {whatif_section}
+
+  {boxscore_html}
 
   <!-- ═══════════════════ SEASON STATS DIVIDER ═══════════════════ -->
   <div class="stats-divider">
@@ -2917,7 +3262,9 @@ def main() -> int:
     sb_conf_records  = bot.collect_sunbelt_conf_records()
     print("Collecting player stats...")
     player_stats     = bot.collect_player_stats()
-    html_content     = bot.render_html_dashboard(evidence, narrative, rank_history, week_review, whatif_scenarios, sb_conf_records, player_stats)
+    print("Fetching last game box score...")
+    last_boxscore    = bot.fetch_last_boxscore()
+    html_content     = bot.render_html_dashboard(evidence, narrative, rank_history, week_review, whatif_scenarios, sb_conf_records, player_stats, last_boxscore)
     html_path = Path(args.html)
     html_path.write_text(html_content, encoding="utf-8")
     print(f"\nDashboard saved: {html_path.resolve()}")
