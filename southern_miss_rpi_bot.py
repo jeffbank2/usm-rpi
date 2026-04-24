@@ -3210,6 +3210,7 @@ def main() -> int:
         print(bot.build_week_review())
         return 0
 
+    _using_cached = False
     try:
         print("Collecting Southern Miss snapshot...")
         current  = bot.collect_snapshot()
@@ -3223,12 +3224,25 @@ def main() -> int:
 
         evidence = bot.build_evidence(previous, current, rivals)
 
-    except requests.HTTPError as exc:
-        print(f"HTTP error: {exc}", file=sys.stderr)
-        return 2
-    except requests.RequestException as exc:
-        print(f"Network error: {exc}", file=sys.stderr)
-        return 2
+    except (requests.HTTPError, requests.RequestException) as exc:
+        # Warren Nolan (or another upstream source) is unreachable.
+        # Fall back to the most recent snapshot already in the database so
+        # the dashboard can still be refreshed with box score / player stats.
+        print(f"Live data fetch failed: {exc}", file=sys.stderr)
+        print("Falling back to most recent cached snapshot...", file=sys.stderr)
+        current = bot.get_previous_snapshot()
+        if current is None:
+            print("No cached snapshot available — cannot continue.", file=sys.stderr)
+            return 2
+        _using_cached = True
+        previous = None
+        rivals   = []
+        evidence = bot.build_evidence(previous, current, rivals)
+        evidence["drivers"] = [
+            f"Live RPI data unavailable (warrennolan.com unreachable). "
+            f"Showing cached snapshot from {current.captured_at[:10]}."
+        ] + evidence.get("drivers", [])
+
     except Exception as exc:
         print(f"Unexpected error: {exc}", file=sys.stderr)
         return 1
@@ -3258,8 +3272,10 @@ def main() -> int:
     week_review      = bot.build_week_review()
     print("Building what-if scenarios...")
     whatif_scenarios = bot.build_whatif_scenarios(current)
-    print("Collecting Sun Belt records...")
-    sb_conf_records  = bot.collect_sunbelt_conf_records()
+    sb_conf_records: Dict[str, Any] = {}
+    if not _using_cached:
+        print("Collecting Sun Belt records...")
+        sb_conf_records = bot.collect_sunbelt_conf_records()
     print("Collecting player stats...")
     player_stats     = bot.collect_player_stats()
     print("Fetching last game box score...")
