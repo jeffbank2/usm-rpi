@@ -66,12 +66,24 @@ USER_AGENT = (
 # Rival teams to track alongside Southern Miss
 # ---------------------------------------------------------------------------
 RIVAL_TEAMS: Dict[str, str] = {
-    "Ole Miss":          "Ole-Miss",
-    "Mississippi State": "Mississippi-State",
-    "Coastal Carolina":  "Coastal-Carolina",
-    "LSU":               "LSU",
-    "Arkansas State":    "Arkansas-State",
-    "UC Santa Barbara":  "UC-Santa-Barbara",
+    # Sun Belt (all teams except Southern Miss)
+    "Louisiana":        "Louisiana",
+    "Troy":             "Troy",
+    "Arkansas State":   "Arkansas-State",
+    "South Alabama":    "South-Alabama",
+    "Louisiana Monroe": "Louisiana-Monroe",
+    "App State":        "App-State",
+    "Georgia State":    "Georgia-State",
+    "Georgia Southern": "Georgia-Southern",
+    "Old Dominion":     "Old-Dominion",
+    "Marshall":         "Marshall",
+    "James Madison":    "James-Madison",
+    "Texas State":      "Texas-State",
+    "Louisiana Tech":   "Louisiana-Tech",
+    "Coastal Carolina": "Coastal-Carolina",
+    # Notable non-conference
+    "Tulane":           "Tulane",
+    "Ole Miss":         "Ole-Miss",
 }
 
 SUN_BELT_SLUGS: Dict[str, str] = {
@@ -1318,37 +1330,39 @@ class SouthernMissRPIBot:
         except Exception:
             return None
 
-        rank = evidence["current"].get("rpi_rank")
-        if rank and rank <= 8:
-            tone = (
-                "Southern Miss is in national seed territory. Write with confidence and clarity. "
-                "Acknowledge the position, note what could threaten it, keep the tone assured."
-            )
-        elif rank and rank <= 16:
-            tone = (
-                "Southern Miss is in strong regional host position. Write with steady optimism. "
-                "Highlight what is working and what needs to hold."
-            )
-        elif rank and rank <= 25:
-            tone = (
-                "Southern Miss is on the host bubble. Write with urgency and precision. "
-                "Every data point matters. Make clear what the team needs to do."
-            )
+        rank    = evidence["current"].get("rpi_rank")
+        record  = evidence["current"].get("overall_record") or "N/A"
+        rd      = evidence.get("rank_delta")
+        if rd is None:
+            rank_delta_str = "no prior snapshot"
+        elif rd > 0:
+            rank_delta_str = f"up {rd} spot{'s' if rd != 1 else ''}"
+        elif rd < 0:
+            rank_delta_str = f"down {abs(rd)} spot{'s' if abs(rd) != 1 else ''}"
         else:
-            tone = (
-                "Southern Miss is outside the host range. Write with honest assessment. "
-                "Be direct about the gap and what the realistic path back looks like."
-            )
+            rank_delta_str = "unchanged"
 
         prompt = textwrap.dedent(f"""
-            You are a college baseball analyst writing a concise Southern Miss RPI daily brief.
-            Tone directive: {tone}
+            You are the voice of Southern Miss baseball — a die-hard Golden Eagle fan who bleeds black and gold, follows the RPI obsessively, and has strong opinions about everyone on the schedule. You write short, punchy RPI update narratives for a fan site. Your tone is confident, a little cocky when things are going well, and brutally honest when they aren't. You know the Sun Belt landscape cold.
+
+            Personality rules:
+            - Tulane is always "those guys from New Orleans who think they're too good for C-USA now"
+            - Louisiana Tech gets no respect until they earn it
+            - UTSA and FAU are pretenders
+            - If USM beats a top-50 RPI team, make it sound like a statement
+            - If USM loses to a bottom-100 team, call it out — no excuses
+            - When the RPI is climbing, bring the swagger. When it's dropping, bring the accountability
+            - Reference Hattiesburg, The Rock, and Pete Taylor Park like they mean something
+            - Never be neutral. Neutral is for people who don't care
+            - Keep it under 150 words. Punchy, not preachy
+            - End with either a hype line or a hard truth — no soft landings
+
+            Current snapshot: RPI #{rank} | Record: {record} | Rank change since last snapshot: {rank_delta_str}
             Use ONLY the facts in the JSON below. Do not invent data.
-            Include: rank movement, record change, why it moved, SOS trajectory, upcoming series preview.
-            Write exactly 2 short paragraphs, 100 words total maximum.
-            Paragraph 1: rank movement, record change, and why it moved.
-            Paragraph 2: SOS trajectory and one upcoming series to watch.
-            No bullet points. No filler phrases. Every word must earn its place.
+            Write exactly 2 short paragraphs, 150 words maximum.
+            Paragraph 1: rank movement, record, and why it moved.
+            Paragraph 2: upcoming schedule and what it means for the RPI.
+            No bullet points. No hedging. End hard.
 
             JSON:
             {json.dumps(evidence, ensure_ascii=False, indent=2)}
@@ -1359,7 +1373,7 @@ class SouthernMissRPIBot:
             response = client.chat.completions.create(
                 model=model,
                 messages=[{"role": "user", "content": prompt}],
-                max_tokens=180,
+                max_tokens=230,
             )
             return response.choices[0].message.content.strip()
         except Exception as exc:
