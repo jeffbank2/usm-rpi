@@ -1395,9 +1395,11 @@ class SouthernMissRPIBot:
         For each upcoming game, project RPI rank impact of a WIN vs LOSS.
 
         RPI projection model (NCAA-calibrated approximations):
-        - Each win/loss shifts RPI value by a weight based on opponent RPI and location.
-        - Win weight:  home=0.6, neutral=0.7, away=0.8 × (1 / opponent_rpi * 30)
-        - Loss weight: home=-0.9, neutral=-0.8, away=-0.6 × (1 / opponent_rpi * 30)
+        - Win gain scales with opponent quality (weak teams = small upside).
+        - Loss penalty is an upset factor — weak opponents hurt MORE when you lose to them.
+        - Opp RPI 150+: per_win=0.001, per_loss=0.002 → swept=-4, lose series=-2, sweep=+1 (capped)
+        - Opp RPI 100–149: loss penalty interpolated; sweep capped at +2.
+        - Opp RPI <100: both scale with opponent strength (existing formula).
         - Rank delta estimated from historical RPI-to-rank sensitivity (~0.0015 per spot at top 25)
         - This is a directional model, not a simulation -- designed to show relative stakes.
         """
@@ -1461,9 +1463,26 @@ class SouthernMissRPIBot:
 
             # RPI impact estimate — per-game granular calculation for all series outcomes
             if opp_rpi and opp_rpi > 0 and current_rpi > 0:
-                opp_strength  = max(0.001, min(1.0, (150 - opp_rpi) / 150))
-                per_win_gain  = WIN_MULT.get(loc, 0.65)  * opp_strength * 0.003
-                per_loss_drop = LOSS_MULT.get(loc, 0.75) * opp_strength * 0.003
+                # Win gain scales with opponent quality (weak teams add little upside).
+                # Loss penalty is an "upset factor" — it rises as opponents get weaker,
+                # because losing to a bad team is more damaging than losing to an elite team.
+                if opp_rpi >= 150:
+                    # Very weak opponent: minimal win benefit, real upset penalty on losses.
+                    # Calibrated so swept=-4, lose series=-2, take series=0, sweep=+1 (capped).
+                    per_win_gain  = 0.001
+                    per_loss_drop = 0.002
+                elif opp_rpi >= 100:
+                    # Moderately weak (100–149): interpolate loss penalty toward upset floor.
+                    t = (opp_rpi - 100) / 50.0  # 0 at RPI 100, 1 at RPI 149
+                    base_strength = max(0.001, (150 - opp_rpi) / 150.0)
+                    per_win_gain  = WIN_MULT.get(loc, 0.65) * base_strength * 0.003
+                    normal_loss   = LOSS_MULT.get(loc, 0.75) * base_strength * 0.003
+                    per_loss_drop = normal_loss + t * (0.002 - normal_loss)
+                else:
+                    # Normal: both gain and penalty scale with opponent strength.
+                    opp_strength  = max(0.001, min(1.0, (150 - opp_rpi) / 150.0))
+                    per_win_gain  = WIN_MULT.get(loc, 0.65)  * opp_strength * 0.003
+                    per_loss_drop = LOSS_MULT.get(loc, 0.75) * opp_strength * 0.003
 
                 def _proj(wins, losses, _pwg=per_win_gain, _pld=per_loss_drop, _cr=current_rank):
                     net = wins * _pwg - losses * _pld
@@ -1492,6 +1511,19 @@ class SouthernMissRPIBot:
                     r = _proj(o["wins"], o["losses"])
                     o["rank"]  = r
                     o["delta"] = current_rank - r  # positive = improved, negative = worsened
+
+                # For weak opponents, cap win upside: beating a bad team shouldn't project
+                # a large rank jump. Sweep vs RPI 150+ = max +1; win series vs RPI 100+ = max +2.
+                if opp_rpi and opp_rpi >= 150:
+                    win_cap = 1
+                elif opp_rpi and opp_rpi >= 100:
+                    win_cap = 2
+                else:
+                    win_cap = 999
+                for o in raw_outcomes:
+                    if o["wins"] > o["losses"] and o["delta"] > win_cap:
+                        o["delta"] = win_cap
+                        o["rank"]  = max(1, current_rank - win_cap)
 
                 win_rank_proj  = raw_outcomes[0]["rank"]
                 loss_rank_proj = raw_outcomes[-1]["rank"]
